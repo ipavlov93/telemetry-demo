@@ -1,10 +1,11 @@
-module github.com/yourname/telemetry-demo/telemetry-node
+module github.com/ipavlov93/telemetry-demo/telemetry-node
 
 go 1.24.4
 
-require github.com/ipavlov93/telemetry-demo v0.0.0-20250703101825-1157da32d4cb
+require github.com/stretchr/testify v1.10.0
 
 require (
-	go.uber.org/multierr v1.10.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

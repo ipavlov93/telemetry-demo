@@ -1,3 +1,3 @@
-module github.com/yourname/telemetry-demo/telemetry-sink
+module github.com/ipavlov93/telemetry-demo/telemetry-sink
 
 go 1.24.4

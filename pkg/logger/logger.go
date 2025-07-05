@@ -20,13 +20,15 @@ type Logger interface {
 	Error(msg string, fields ...zap.Field)
 }
 
-// ZapLogger is simple wrapper for zap.Logger
+// ZapLogger is simple wrapper around underlying zap.Logger.
 // ZapLogger implements Logger to make it possible swap logger in the future.
 type ZapLogger struct {
 	logger *zap.Logger
 }
 
-// New constructor creates ZapLogger wrapper with configured underlined logger.
+// New creates ZapLogger with a configured underlying zap.Logger.
+// The logLevel parameter specifies the minimum level to log; messages below this level will be ignored.
+// Logs are written to the given io.Writer using JSON encoding with RFC3339 timestamps.
 func New(w io.Writer, logLevel zapcore.Level) ZapLogger {
 	cfg := zap.NewProductionEncoderConfig()
 	cfg.EncodeTime = zapcore.RFC3339TimeEncoder

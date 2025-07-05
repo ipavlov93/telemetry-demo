@@ -2,11 +2,14 @@ package domain
 
 import "context"
 
+// Sensor performs measurements using StartMeasurement().
+// It should respect context cancellation (e.g., via <-ctx.Done()) and stop gracefully (measurement process finish).
 type Sensor interface {
-	Value(ctx context.Context) <-chan *SensorValue
+	Run(ctx context.Context) error
 }
 
-type DataSink interface {
-	Send(data *SensorValue) error
-	Close() error
+// DataSink is an abstraction of a destination that receives data (e.g. SensorValue records).
+type DataSink[T any] interface {
+	Send(data *T)
+	Close()
 }

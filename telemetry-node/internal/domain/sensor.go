@@ -1,12 +1,14 @@
 package domain
 
-import "context"
+import (
+	"context"
+)
 
+// Sensor performs measurements using Run().
 type Sensor interface {
-	Value(ctx context.Context) <-chan *SensorValue
-}
-
-type DataSink interface {
-	Send(data *SensorValue) error
-	Close() error
+	// Run should respect context cancellation (e.g., via <-ctx.Done()) by design.
+	// Return parameters:
+	// 1. *SensorValues are send to channel.
+	// 2. Startup errors returned using err (e.g. Run can't start measurements).
+	Run(ctx context.Context) (<-chan *SensorValue, error)
 }

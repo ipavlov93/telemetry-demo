@@ -14,36 +14,67 @@ import (
 func TestIntervalSensor_Value(t *testing.T) {
 	intervalSeconds := 1
 	totalSeconds := 5
+	batchSize := int64(1)
 
 	t.Run("IntervalSensor.Run() happy flow", func(t *testing.T) {
 		intervalSensor, err := domain.NewIntervalSensor(
-			"",
-			time.Duration(intervalSeconds)*time.Second,
 			randomValue,
+			time.Duration(intervalSeconds)*time.Second,
+			batchSize,
+			"",
 			zap.NewNop(),
 		)
 		assert.NoError(t, err)
 
 		// context timeout duration has small approximation error or testing code call takes some time
-		totalMilliseconds := time.Duration(totalSeconds*1000+10) * time.Millisecond
-		ctx, cancel := context.WithTimeout(context.Background(), totalMilliseconds)
+		timeout := time.Duration(totalSeconds*1000+10) * time.Millisecond
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
 		valuesChan, err := intervalSensor.Run(ctx)
 		assert.NoError(t, err)
 
-		var values []*domain.SensorValue
+		var values []domain.SensorValue
 		for value := range valuesChan {
-			values = append(values, value)
+			values = append(values, value...)
 		}
 
 		assert.Equal(t, totalSeconds/intervalSeconds, len(values))
 	})
+	t.Run("should gracefully send partial batch before context cancellation", func(t *testing.T) {
+		batchSize = 5
+
+		intervalSensor, err := domain.NewIntervalSensor(
+			randomValue,
+			time.Duration(intervalSeconds)*time.Second,
+			batchSize,
+			"",
+			zap.NewNop(),
+		)
+		assert.NoError(t, err)
+
+		milliseconds := 4500
+		// context timeout duration has small approximation error or testing code call takes some time
+		timeoutMillisecond := time.Duration(milliseconds) * time.Millisecond
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutMillisecond)
+		defer cancel()
+
+		valuesChan, err := intervalSensor.Run(ctx)
+		assert.NoError(t, err)
+
+		var values []domain.SensorValue
+		for value := range valuesChan {
+			values = append(values, value...)
+		}
+
+		assert.Equal(t, milliseconds/intervalSeconds/1000, len(values))
+	})
 	t.Run("sender should close channel after generateFunc panic", func(t *testing.T) {
 		intervalSensor, err := domain.NewIntervalSensor(
-			"",
-			time.Duration(intervalSeconds)*time.Second,
 			randomPanic,
+			time.Duration(intervalSeconds)*time.Second,
+			batchSize,
+			"",
 			zap.NewNop(),
 		)
 		assert.NoError(t, err)
@@ -58,12 +89,15 @@ func TestIntervalSensor_Value(t *testing.T) {
 }
 
 func TestIntervalSensor_NewIntervalSensor(t *testing.T) {
+	batchSize := int64(1)
+
 	t.Run("should return error when interval is zero", func(t *testing.T) {
 		intervalSensor, err := domain.NewIntervalSensor(
-			"",
-			0,
 			randomValue,
-			nil,
+			0,
+			batchSize,
+			"",
+			zap.NewNop(),
 		)
 
 		assert.Error(t, err)
@@ -71,9 +105,10 @@ func TestIntervalSensor_NewIntervalSensor(t *testing.T) {
 	})
 	t.Run("should return an error when generateFunc is nil", func(t *testing.T) {
 		intervalSensor, err := domain.NewIntervalSensor(
-			"",
-			time.Second,
 			nil,
+			0,
+			batchSize,
+			"",
 			zap.NewNop(),
 		)
 

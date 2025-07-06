@@ -26,10 +26,15 @@ type ZapLogger struct {
 	logger *zap.Logger
 }
 
+// NewNopLogger returns ZapLogger with a no-op underlined logger that never writes out logs or internal errors.
+func NewNopLogger() *ZapLogger {
+	return &ZapLogger{logger: zap.NewNop()}
+}
+
 // New creates ZapLogger with a configured underlying zap.Logger.
 // The logLevel parameter specifies the minimum level to log; messages below this level will be ignored.
 // Logs are written to the given io.Writer using JSON encoding with RFC3339 timestamps.
-func New(w io.Writer, logLevel zapcore.Level) ZapLogger {
+func New(w io.Writer, logLevel zapcore.Level) *ZapLogger {
 	cfg := zap.NewProductionEncoderConfig()
 	cfg.EncodeTime = zapcore.RFC3339TimeEncoder
 
@@ -41,7 +46,7 @@ func New(w io.Writer, logLevel zapcore.Level) ZapLogger {
 
 	logger := zap.New(core, zap.AddCaller()).WithOptions(zap.AddCallerSkip(1))
 
-	return ZapLogger{logger: logger}
+	return &ZapLogger{logger: logger}
 }
 
 // Sync calls the underlying Sync method, flushing any buffered log entries.

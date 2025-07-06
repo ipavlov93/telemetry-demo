@@ -2,8 +2,8 @@ package domain
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/ipavlov93/telemetry-demo/pkg/logger"
@@ -15,31 +15,42 @@ type IntervalSensor struct {
 	sensorName   string
 	interval     time.Duration
 	generateFunc func() int64
-
-	logger logger.Logger
+	logger       logger.Logger
 }
 
-// NewIntervalSensor constructor returns error when generateFunc is nil.
+// NewIntervalSensor returns pointer to created instance.
+// Constructor will return error if:
+// - interval is non-positive;
+// - generateFunc is nil.
+// If any optional parameters are zero-valued, the constructor will assign default values to the corresponding fields.
 func NewIntervalSensor(
 	name string,
 	interval time.Duration,
 	generateFunc func() int64,
-	logger logger.Logger,
+	inputLogger logger.Logger,
 ) (*IntervalSensor, error) {
+	if interval == 0 {
+		return nil, fmt.Errorf("can't init IntervalSensor, interval is zero")
+	}
 	if generateFunc == nil {
 		return nil, fmt.Errorf("can't init IntervalSensor, generateFunc is nil")
 	}
 
 	sensorName := name
 	if sensorName == "" {
-		sensorName = fmt.Sprintf("sensor-%s", rand.Text())
+		sensorName = fmt.Sprintf("sensor-%d", time.Now().Unix())
+	}
+
+	actualLogger := inputLogger
+	if inputLogger == nil || reflect.ValueOf(inputLogger).IsNil() {
+		actualLogger = logger.NewNopLogger()
 	}
 
 	return &IntervalSensor{
 		sensorName:   sensorName,
 		interval:     interval,
 		generateFunc: generateFunc,
-		logger:       logger,
+		logger:       actualLogger,
 	}, nil
 }
 

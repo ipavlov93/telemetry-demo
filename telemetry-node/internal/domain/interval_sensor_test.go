@@ -11,14 +11,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func randomValue() int64 {
-	return rand.Int64N(int64(2 << 16))
-}
-
-func randomPanic() int64 {
-	panic("any reason")
-}
-
 func TestIntervalSensor_Value(t *testing.T) {
 	intervalSeconds := 1
 	totalSeconds := 5
@@ -66,6 +58,17 @@ func TestIntervalSensor_Value(t *testing.T) {
 }
 
 func TestIntervalSensor_NewIntervalSensor(t *testing.T) {
+	t.Run("should return error when interval is zero", func(t *testing.T) {
+		intervalSensor, err := domain.NewIntervalSensor(
+			"",
+			0,
+			randomValue,
+			nil,
+		)
+
+		assert.Error(t, err)
+		assert.Nil(t, intervalSensor)
+	})
 	t.Run("should return an error when generateFunc is nil", func(t *testing.T) {
 		intervalSensor, err := domain.NewIntervalSensor(
 			"",
@@ -73,7 +76,16 @@ func TestIntervalSensor_NewIntervalSensor(t *testing.T) {
 			nil,
 			zap.NewNop(),
 		)
+
 		assert.Error(t, err)
 		assert.Nil(t, intervalSensor)
 	})
+}
+
+func randomValue() int64 {
+	return rand.Int64N(int64(2 << 16))
+}
+
+func randomPanic() int64 {
+	panic("any reason")
 }

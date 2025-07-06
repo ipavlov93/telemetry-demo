@@ -63,6 +63,8 @@ func TestIntervalSensor_Value(t *testing.T) {
 		err = intervalSensor.Run(context.Background())
 		assert.NoError(t, err)
 
+		time.Sleep(time.Duration(intervalSeconds) * time.Second)
+
 		assert.True(t, channelDataSink.Closed())
 	})
 }

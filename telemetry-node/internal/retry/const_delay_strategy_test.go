@@ -1,4 +1,4 @@
-package sender_test
+package retry_test
 
 import (
 	"context"
@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/sender"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/retry"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRetrySender_SuccessFirstTry(t *testing.T) {
+func TestRetryConstDelayStrategy_SuccessFirstTry(t *testing.T) {
 	t.Run("operation should succeed immediately", func(t *testing.T) {
-		sender := sender.NewRetrySender(3, 20*time.Millisecond)
+		sender := retry.NewConstDelayStrategy(3, 20*time.Millisecond)
 
 		calls := 0
 		err := sender.DoWithContext(context.Background(), func(ctx context.Context) error {
@@ -25,7 +25,7 @@ func TestRetrySender_SuccessFirstTry(t *testing.T) {
 	})
 
 	t.Run("operation should succeed after retries", func(t *testing.T) {
-		sender := sender.NewRetrySender(5, 20*time.Millisecond)
+		sender := retry.NewConstDelayStrategy(5, 20*time.Millisecond)
 
 		calls := 0
 		err := sender.DoWithContext(context.Background(), func(ctx context.Context) error {
@@ -40,7 +40,7 @@ func TestRetrySender_SuccessFirstTry(t *testing.T) {
 		assert.Equal(t, 3, calls)
 	})
 	t.Run("operation should fail after max retry attempts number reached", func(t *testing.T) {
-		sender := sender.NewRetrySender(3, 20*time.Millisecond)
+		sender := retry.NewConstDelayStrategy(3, 20*time.Millisecond)
 
 		calls := 0
 		expectedErr := errors.New("always fails")
@@ -52,8 +52,8 @@ func TestRetrySender_SuccessFirstTry(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 		assert.Equal(t, 3, calls)
 	})
-	t.Run("RetrySender should respect context cancellation", func(t *testing.T) {
-		sender := sender.NewRetrySender(5, 100*time.Millisecond)
+	t.Run("RetryStrategy should respect context cancellation", func(t *testing.T) {
+		sender := retry.NewConstDelayStrategy(5, 100*time.Millisecond)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
 		defer cancel()

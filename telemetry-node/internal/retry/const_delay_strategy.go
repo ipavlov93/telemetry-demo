@@ -1,5 +1,5 @@
-// Package sender provides components for reliable network communication.
-package sender
+// Package retry provides retry strategy components for reliable network communication.
+package retry
 
 import (
 	"context"
@@ -8,26 +8,21 @@ import (
 
 const defaultRetryAttemptsNumber = 1 // turn off retry attempts by default
 
-// RetrySender represents component with retry strategy that respects context cancellation by design.
-type RetrySender interface {
-	DoWithContext(context.Context, func(context.Context) error) error
-}
-
-// ConstDelaySender implements the RetrySender interface.
+// ConstDelayStrategy implements the RetryStrategy interface.
 // It retries an operation a fixed retry attempts number with constant delay between each attempt.
-type ConstDelaySender struct {
+type ConstDelayStrategy struct {
 	maxAttempts int
 	delay       time.Duration
 }
 
-// NewRetrySender returns pointer to created instance of ConstDelaySender.
-// Constructor set defaultRetryAttemptsNumber if maxAttempts is less than 1.
+// NewConstDelayStrategy returns pointer to created instance of ConstDelayStrategy.
+// Important: constructor set defaultRetryAttemptsNumber if maxAttempts is less than 1.
 // Notice: constructor skip delay validation or default value set.
-func NewRetrySender(maxAttempts int, delay time.Duration) *ConstDelaySender {
+func NewConstDelayStrategy(maxAttempts int, delay time.Duration) *ConstDelayStrategy {
 	if maxAttempts < 1 {
 		maxAttempts = defaultRetryAttemptsNumber
 	}
-	return &ConstDelaySender{
+	return &ConstDelayStrategy{
 		maxAttempts: maxAttempts,
 		delay:       delay,
 	}
@@ -38,7 +33,7 @@ func NewRetrySender(maxAttempts int, delay time.Duration) *ConstDelaySender {
 // - context is done;
 // - retry limit is reached.
 // It returns the last error if all retries fail.
-func (r *ConstDelaySender) DoWithContext(parent context.Context, operation func(ctx context.Context) error) error {
+func (r *ConstDelayStrategy) DoWithContext(parent context.Context, operation func(ctx context.Context) error) error {
 	var err error
 
 	for attempt := 1; attempt <= r.maxAttempts; attempt++ {

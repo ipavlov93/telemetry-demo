@@ -8,7 +8,7 @@ package sensorapi
 
 import (
 	context "context"
-	sensor "github.com/ipavlov93/telemetry-demo/proto/v1/sensor"
+	sensor "github.com/ipavlov93/telemetry-demo/pkg/grpc/generated/v1/sensor"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"

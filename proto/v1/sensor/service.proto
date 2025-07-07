@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package sensor.v1;
+
+option go_package = "github.com/ipavlov93/telemetry-demo/proto/v1/sensor;sensorapi";
+
+import "v1/sensor/sensor.proto";
+
+service SensorService {
+  rpc SendSensorValues (SensorValuesRequest) returns (SensorValuesResponse);
+}

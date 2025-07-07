@@ -20,7 +20,7 @@ type ConstDelaySender struct {
 	delay       time.Duration
 }
 
-// NewRetrySender creates instance of ConstDelaySender.
+// NewRetrySender returns pointer to created instance of ConstDelaySender.
 // Constructor set defaultRetryAttemptsNumber if maxAttempts is less than 1.
 // Notice: constructor skip delay validation or default value set.
 func NewRetrySender(maxAttempts int, delay time.Duration) *ConstDelaySender {

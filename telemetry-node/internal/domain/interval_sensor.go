@@ -21,7 +21,7 @@ type IntervalSensor struct {
 	logger       logger.Logger
 }
 
-// NewIntervalSensor returns pointer to created instance.
+// NewIntervalSensor returns pointer to created instance of IntervalSensor.
 // Constructor will return error if:
 // - interval is non-positive;
 // - generateFunc is nil.

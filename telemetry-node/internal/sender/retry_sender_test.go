@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/client/sender"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/sender"
 	"github.com/stretchr/testify/assert"
 )
 

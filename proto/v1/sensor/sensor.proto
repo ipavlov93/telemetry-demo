@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package sensor.v1;
+
+option go_package = "github.com/ipavlov93/telemetry-demo/proto/v1/sensor;sensorpb";
+
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
+
+// Represents a single sensor value.
+message SensorValue {
+  // Name or identifier of the sensor.
+  string sensor_name = 1;
+
+  // Represents a single sensor measurement.
+  Measurement measurement = 2;
+
+  message Measurement {
+    // Measurement value
+    // Notice: int64 wrapper is used to distinguish the absence of field and its default zero value.
+    google.protobuf.Int64Value sensor_value = 2;
+
+    // Measurement timestamp
+    google.protobuf.Timestamp  created_at = 3;
+  }
+}
+
+// Request contains list of sensor values.
+message SensorValuesRequest {
+  repeated SensorValue items = 1;
+}
+
+message SensorValuesResponse {
+}

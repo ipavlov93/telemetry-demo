@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package sensor.v1;
 
-option go_package = "github.com/ipavlov93/telemetry-demo/proto/v1/sensor;sensorpb";
+option go_package = "github.com/ipavlov93/telemetry-demo/pkg/grpc/generated/v1/sensor;sensorpb";
 
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/timestamp.proto";

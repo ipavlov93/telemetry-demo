@@ -8,8 +8,7 @@ import (
 
 const defaultRetryAttemptsNumber = 1 // turn off retry attempts by default
 
-// ConstDelayStrategy implements the RetryStrategy interface.
-// It retries an operation a fixed retry attempts number with constant delay between each attempt.
+// ConstDelayStrategy  retries an operation a fixed retry attempts number with constant delay between each attempt.
 type ConstDelayStrategy struct {
 	maxAttempts int
 	delay       time.Duration

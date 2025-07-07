@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRetryConstDelayStrategy_SuccessFirstTry(t *testing.T) {
+func TestRetryStrategy_ConstDelayStrategy(t *testing.T) {
 	t.Run("operation should succeed immediately", func(t *testing.T) {
 		sender := retry.NewConstDelayStrategy(3, 20*time.Millisecond)
 
@@ -52,7 +52,7 @@ func TestRetryConstDelayStrategy_SuccessFirstTry(t *testing.T) {
 		assert.Equal(t, expectedErr, err)
 		assert.Equal(t, 3, calls)
 	})
-	t.Run("RetryStrategy should respect context cancellation", func(t *testing.T) {
+	t.Run("Strategy should respect context cancellation", func(t *testing.T) {
 		sender := retry.NewConstDelayStrategy(5, 100*time.Millisecond)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)

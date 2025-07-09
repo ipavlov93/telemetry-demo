@@ -57,3 +57,16 @@ func (z *ZapLogger) Info(msg string, fields ...zap.Field)  { z.logger.Info(msg, 
 func (z *ZapLogger) Warn(msg string, fields ...zap.Field)  { z.logger.Warn(msg, fields...) }
 func (z *ZapLogger) Debug(msg string, fields ...zap.Field) { z.logger.Debug(msg, fields...) }
 func (z *ZapLogger) Error(msg string, fields ...zap.Field) { z.logger.Error(msg, fields...) }
+
+// ParseLevel utility function tries to parse given level or set default level.
+func ParseLevel(level string, fallback zapcore.Level) zapcore.Level {
+	if level == "" {
+		return fallback
+	}
+	logLevel, err := zapcore.ParseLevel(level)
+	if err != nil {
+		// set default log level
+		logLevel = fallback
+	}
+	return logLevel
+}

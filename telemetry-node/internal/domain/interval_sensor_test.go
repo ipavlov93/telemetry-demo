@@ -11,10 +11,10 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestIntervalSensor_Value(t *testing.T) {
+func TestIntervalSensor_Run(t *testing.T) {
 	intervalSeconds := 1
 	totalSeconds := 5
-	batchSize := int64(1)
+	batchSize := 1
 
 	t.Run("IntervalSensor.Run() happy flow", func(t *testing.T) {
 		intervalSensor, err := domain.NewIntervalSensor(
@@ -89,12 +89,24 @@ func TestIntervalSensor_Value(t *testing.T) {
 }
 
 func TestIntervalSensor_NewIntervalSensor(t *testing.T) {
-	batchSize := int64(1)
+	batchSize := 1
 
-	t.Run("should return error when interval is zero", func(t *testing.T) {
+	t.Run("should return nil error when interval is zero", func(t *testing.T) {
 		intervalSensor, err := domain.NewIntervalSensor(
 			randomValue,
 			0,
+			batchSize,
+			"",
+			zap.NewNop(),
+		)
+
+		assert.NoError(t, err)
+		assert.NotEmpty(t, intervalSensor)
+	})
+	t.Run("should return error when interval is below zero", func(t *testing.T) {
+		intervalSensor, err := domain.NewIntervalSensor(
+			randomValue,
+			-5,
 			batchSize,
 			"",
 			zap.NewNop(),
@@ -114,6 +126,53 @@ func TestIntervalSensor_NewIntervalSensor(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, intervalSensor)
+	})
+}
+
+func TestIntervalSensor_NewRateSensor(t *testing.T) {
+	ratePerSecond := float32(5.0)
+
+	t.Run("should return nil error on positive ratePerSecond", func(t *testing.T) {
+		_, err := domain.NewRateSensor(
+			randomValue,
+			ratePerSecond,
+			"",
+			zap.NewNop(),
+		)
+
+		assert.NoError(t, err)
+	})
+	t.Run("should return nil error on zero ratePerSecond", func(t *testing.T) {
+		_, err := domain.NewRateSensor(
+			randomValue,
+			ratePerSecond,
+			"",
+			zap.NewNop(),
+		)
+
+		assert.NoError(t, err)
+	})
+	t.Run("should return error when ratePerSecond is below zero", func(t *testing.T) {
+		rateSensor, err := domain.NewRateSensor(
+			randomValue,
+			-5,
+			"",
+			zap.NewNop(),
+		)
+
+		assert.Error(t, err)
+		assert.Empty(t, rateSensor)
+	})
+	t.Run("should return an error when generateFunc is nil", func(t *testing.T) {
+		rateSensor, err := domain.NewRateSensor(
+			nil,
+			0,
+			"",
+			zap.NewNop(),
+		)
+
+		assert.Error(t, err)
+		assert.Nil(t, rateSensor)
 	})
 }
 

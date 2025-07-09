@@ -93,13 +93,6 @@ func NewIntervalSensor(
 // The measurement process stops when the context is done (via <-ctx.Done()).
 // Notice: valuesChan channel is passed as sender-only/receive-only to avoid possible deadlocks.
 func (s *IntervalSensor) Run(ctx context.Context, wg *sync.WaitGroup) (<-chan []SensorValue, error) {
-	defer func() {
-		if wg != nil {
-			return
-		}
-		wg.Done()
-	}()
-
 	if s.generateFunc == nil {
 		return nil, fmt.Errorf("can't generate value, generateFunc is nil")
 	}
@@ -119,6 +112,11 @@ func (s *IntervalSensor) Run(ctx context.Context, wg *sync.WaitGroup) (<-chan []
 			// ensure that it's single closer
 			// receivers will not wait forever on channel close
 			close(valuesChan)
+
+			if wg == nil {
+				return
+			}
+			wg.Done()
 		}()
 
 		// create buffer with bufferSize capacity
@@ -131,6 +129,7 @@ func (s *IntervalSensor) Run(ctx context.Context, wg *sync.WaitGroup) (<-chan []
 				if len(buffer) > 0 {
 					valuesChan <- buffer
 				}
+				s.logger.Debug("IntervalSensor received context done, returning")
 				return
 			case <-time.After(s.interval):
 				//for range s.bufferSize {

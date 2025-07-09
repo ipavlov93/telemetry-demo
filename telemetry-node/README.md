@@ -1,5 +1,50 @@
 # Telemetry node
 
+Go app designed as two-stage pipeline using workers and channel.
+
+---
+
+## Run prerequisites
+
+### env file
+
+1. Create copy of [.env.local](.env.example) file.
+2. Set values depends on your environment.
+
+### Run docker container
+
+#### Build image
+`
+cd ../../
+docker build --no-cache -f telemetry-node/docker/Dockerfile -t telemetry-node:latest .
+`
+
+#### Run container
+
+`
+docker run --env-file ./telemetry-node/.env telemetry-node
+`
+
+### Deploy to K8s cluster
+
+0. Build docker image using docker build from previous section.
+// here some steps omitted related to docker push tag to docker registry
+1. Apply deployment:
+
+`
+kubectl apply -f k8s/telemetry-node-deployment.yaml
+`
+
+---
+
+## Run tests
+
+There are unit few unit tests for this project.
+It's recommended to run the tests using this command:
+`go test ./... -race -count 1`
+
+---
+
 ## Concept
 
 App designed as two-stage pipeline using workers and channel.

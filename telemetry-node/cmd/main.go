@@ -35,9 +35,9 @@ func main() {
 	lg := logger.New(os.Stdout, logLevel)
 	defer lg.Sync()
 
-	// actualRPS is "floored" and converted to int.
+	// actualRPS is "ceilled" and converted to int.
 	// More details are in the Client-side Rate Limiter Setup section.
-	actualRPS := int(math.Floor(float64(appConfig.RequestRatePerSecond)))
+	actualRPS := int(math.Ceil(float64(appConfig.RequestRatePerSecond)))
 
 	// create IntervalSensor instance
 	sensor, err := domain.NewRateSensor(
@@ -66,8 +66,11 @@ func main() {
 
 	perRetryTimeout := 100 * time.Millisecond //  Timeout for each individual retry attempt
 
+	// Important: if totalTimeoutPerRPCall <= perRetryTimeout then retryStrategy will never run
+	totalTimeoutPerRPCall := perRetryTimeout * time.Duration(appConfig.GrpcClientMaxRetryAttempts)
+
 	grpcClientOptions := []grpc.DialOption{
-		// insecure is allowed to use only for local development
+		// Important: insecure is allowed to use only for local development
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 
 		// Important: there won't be retry attempts if server is totally unavailable due network issues
@@ -122,12 +125,13 @@ func main() {
 
 	wg.Add(1)
 	// Run send worker
-	go func(wg *sync.WaitGroup) {
+	go func(rpcCallTimeout time.Duration, wg *sync.WaitGroup) {
 		defer wg.Done()
 
 		for {
 			select {
 			case <-ctx.Done():
+				lg.Debug("send worker received context done, returning")
 				return
 			default:
 				// Block until the rate limiter allows sending the next request
@@ -138,18 +142,20 @@ func main() {
 					lg.Error("Rate limiter wait interrupted", zap.Error(err))
 					return
 				}
-				sensorService.SendSensorValues(ctx, valuesChan)
+				sensorService.SendSensorValues(ctx, rpcCallTimeout, valuesChan)
 			}
 		}
-	}(&wg)
+	}(totalTimeoutPerRPCall, &wg)
 
 	// Block until a signal is received or context is cancelled
 	select {
 	case <-signalCh:
-		lg.Info("Received signal. Starting graceful shutdown")
+		lg.Info("Main routine received signal. Starting graceful shutdown")
 		cancel() // cancel the context to signal other goroutines to stop
 	}
 
 	// Wait for other goroutines to stop
 	wg.Wait()
+
+	lg.Info("Main routine returned")
 }

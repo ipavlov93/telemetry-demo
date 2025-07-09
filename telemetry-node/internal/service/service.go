@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"strconv"
+	"time"
 
 	sensorpb "github.com/ipavlov93/telemetry-demo/pkg/grpc/generated/v1/sensor"
 	sensorapi "github.com/ipavlov93/telemetry-demo/pkg/grpc/generated/v1/sensor_service"
@@ -34,20 +35,25 @@ func NewSensorService(
 
 // SendSensorValues consumes sensor values (single slice) from the channel and sends them using corresponding client.
 // Notice: it won't drain remaining messages from channel if context is cancelled.
-func (s *SensorService) SendSensorValues(ctx context.Context, input <-chan []domain.SensorValue) {
+func (s *SensorService) SendSensorValues(parentCtx context.Context, timeoutDuration time.Duration, input <-chan []domain.SensorValue) {
 	for {
 		select {
-		case <-ctx.Done():
-			s.logger.Info("SensorService context cancelled")
+		case <-parentCtx.Done():
+			s.logger.Debug("SensorService received context done, returning")
 			return
 		case sensorValues, ok := <-input:
 			if !ok {
-				s.logger.Info("SensorService input channel closed")
+				s.logger.Debug("SensorService input channel closed")
 				return
 			}
 
 			// prepare request
 			req := toProtoRequest(sensorValues)
+
+			// Notice:
+			// individual context is passed per RPC call
+			ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+			defer cancel()
 
 			// send attempt with retry
 			// there won't be any retry attempts if server is totally unavailable due network issues

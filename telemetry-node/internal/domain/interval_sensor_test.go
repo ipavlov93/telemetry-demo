@@ -144,15 +144,15 @@ func TestIntervalSensor_NewRateSensor(t *testing.T) {
 
 		assert.NoError(t, err)
 	})
-	t.Run("should return nil error on zero ratePerSecond", func(t *testing.T) {
+	t.Run("should return error on zero ratePerSecond", func(t *testing.T) {
 		_, err := domain.NewRateSensor(
 			randomValue,
-			ratePerSecond,
+			0,
 			"",
 			zap.NewNop(),
 		)
 
-		assert.NoError(t, err)
+		assert.Error(t, err)
 	})
 	t.Run("should return error when ratePerSecond is below zero", func(t *testing.T) {
 		rateSensor, err := domain.NewRateSensor(

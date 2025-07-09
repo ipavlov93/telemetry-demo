@@ -30,7 +30,7 @@ type IntervalSensor struct {
 // NewRateSensor returns pointer to created instance of IntervalSensor.
 // This constructor is used to create instance only with defined ratePerSecond (with delay).
 // Constructor will return error if:
-// - ratePerSecond is non-positive;
+// - ratePerSecond is below or equals zero;
 // - generateFunc is nil.
 // If any optional parameters are zero-valued, the constructor will assign default values to the corresponding fields.
 // It skips logger validation.
@@ -40,7 +40,7 @@ func NewRateSensor(
 	name string,
 	lg logger.Logger,
 ) (*IntervalSensor, error) {
-	if ratePerSecond < 1 {
+	if ratePerSecond <= 0 {
 		return nil, fmt.Errorf("can't init IntervalSensor, ratePerSecond is invalid")
 	}
 	interval := ratePerSecondToInterval(ratePerSecond, defaultInterval)

@@ -3,6 +3,7 @@ package domain_test
 import (
 	"context"
 	"math/rand/v2"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,8 +16,9 @@ func TestIntervalSensor_Run(t *testing.T) {
 	intervalSeconds := 1
 	totalSeconds := 5
 	batchSize := 1
+	wg := sync.WaitGroup{}
 
-	t.Run("IntervalSensor.Run() happy flow", func(t *testing.T) {
+	t.Run("IntervalSensor.SendSensorValues() happy flow", func(t *testing.T) {
 		intervalSensor, err := domain.NewIntervalSensor(
 			randomValue,
 			time.Duration(intervalSeconds)*time.Second,
@@ -31,7 +33,7 @@ func TestIntervalSensor_Run(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		valuesChan, err := intervalSensor.Run(ctx)
+		valuesChan, err := intervalSensor.Run(ctx, &wg)
 		assert.NoError(t, err)
 
 		var values []domain.SensorValue
@@ -59,7 +61,7 @@ func TestIntervalSensor_Run(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeoutMillisecond)
 		defer cancel()
 
-		valuesChan, err := intervalSensor.Run(ctx)
+		valuesChan, err := intervalSensor.Run(ctx, &wg)
 		assert.NoError(t, err)
 
 		var values []domain.SensorValue
@@ -79,7 +81,7 @@ func TestIntervalSensor_Run(t *testing.T) {
 		)
 		assert.NoError(t, err)
 
-		valuesChan, err := intervalSensor.Run(context.Background())
+		valuesChan, err := intervalSensor.Run(context.Background(), &wg)
 		assert.NoError(t, err)
 
 		for range valuesChan {

@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ipavlov93/telemetry-demo/pkg/logger"
@@ -91,7 +92,14 @@ func NewIntervalSensor(
 // Method returns error if IntervalSensor hasn't been set properly.
 // The measurement process stops when the context is done (via <-ctx.Done()).
 // Notice: valuesChan channel is passed as sender-only/receive-only to avoid possible deadlocks.
-func (s *IntervalSensor) Run(ctx context.Context) (<-chan []SensorValue, error) {
+func (s *IntervalSensor) Run(ctx context.Context, wg *sync.WaitGroup) (<-chan []SensorValue, error) {
+	defer func() {
+		if wg != nil {
+			return
+		}
+		wg.Done()
+	}()
+
 	if s.generateFunc == nil {
 		return nil, fmt.Errorf("can't generate value, generateFunc is nil")
 	}

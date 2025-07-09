@@ -121,6 +121,10 @@ func main() {
 
 	// Run sensor worker
 	valuesChan, err := sensor.Run(ctx, &wg)
+	if err != nil {
+		lg.Error("failed to run IntervalSensor", zap.Error(err))
+		os.Exit(1)
+	}
 
 	//wg.Add(1) // go build -race found negative wg counter
 

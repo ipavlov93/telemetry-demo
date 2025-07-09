@@ -33,9 +33,14 @@ func NewSensorService(
 	}
 }
 
-// SendSensorValues consumes sensor values (single slice) from the channel and sends them using corresponding client.
+// SendSensorValues consumes sensor values (single slice) from the input channel and sends them using corresponding client.
+// timeoutDuration is total timeout per RPC call (including retry attempts).
 // Notice: it won't drain remaining messages from channel if context is cancelled.
-func (s *SensorService) SendSensorValues(parentCtx context.Context, timeoutDuration time.Duration, input <-chan []domain.SensorValue) {
+func (s *SensorService) SendSensorValues(
+	parentCtx context.Context,
+	timeoutDuration time.Duration,
+	input <-chan []domain.SensorValue,
+) {
 	for {
 		select {
 		case <-parentCtx.Done():

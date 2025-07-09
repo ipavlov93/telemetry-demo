@@ -120,10 +120,10 @@ func main() {
 	var wg sync.WaitGroup
 
 	// Run sensor worker
-	wg.Add(1)
 	valuesChan, err := sensor.Run(ctx, &wg)
 
-	wg.Add(1)
+	//wg.Add(1) // go build -race found negative wg counter
+
 	// Run send worker
 	go func(rpcCallTimeout time.Duration, wg *sync.WaitGroup) {
 		defer wg.Done()
@@ -146,6 +146,7 @@ func main() {
 			}
 		}
 	}(totalTimeoutPerRPCall, &wg)
+	wg.Add(1)
 
 	// Block until a signal is received or context is cancelled
 	select {

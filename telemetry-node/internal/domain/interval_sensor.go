@@ -100,6 +100,10 @@ func (s *IntervalSensor) Run(ctx context.Context, wg *sync.WaitGroup) (<-chan []
 	// buffered channels is used to prevent immediate block on channel send
 	valuesChan := make(chan []SensorValue, 100)
 
+	if wg != nil {
+		wg.Add(1)
+	}
+
 	go func(ctx context.Context, valuesChan chan<- []SensorValue) {
 		defer func() {
 			if r := recover(); r != nil {

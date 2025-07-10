@@ -91,13 +91,12 @@ func NewIntervalSensor(
 // Run starts producing data at a constant rate in a separate goroutine.
 // Method returns error if IntervalSensor hasn't been set properly.
 // The measurement process stops when the context is done (via <-ctx.Done()).
-// Notice: valuesChan channel is passed as sender-only/receive-only to avoid possible deadlocks.
 func (s *IntervalSensor) Run(ctx context.Context, wg *sync.WaitGroup) (<-chan []SensorValue, error) {
 	if s.generateFunc == nil {
 		return nil, fmt.Errorf("can't generate value, generateFunc is nil")
 	}
 
-	// buffered channels is used to prevent immediate block on channel send
+	// buffered channel is used to prevent immediate block on channel send
 	valuesChan := make(chan []SensorValue, 100)
 
 	if wg != nil {

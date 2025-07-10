@@ -51,6 +51,12 @@ Notice: .env file variable GRPC_SERVER_SOCKET would be reset during deploy to K8
 
 /k8s directory contains helm charts and templates.
 
+## FAQ
+
+1. Why interfaces haven't been defined for each app's component with respect dependency inversion principle ?
+Answer: I've share the following idea: don't create redundant contracts (intefaces) without usage, only for testing purpose. (I am going to add them with tests in future).
+Components that accepts dependencis should respect dependency inversion principle.
+
 ## Development
 
 ### Prerequisites

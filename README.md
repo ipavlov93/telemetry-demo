@@ -36,6 +36,8 @@ There are several options how you can run this mono repository's apps using:
 2. Docker
 3. K8s cluster and basic tools (kubectl, etc.)
 
+You can find how to configure and run apps in corresponding documentation.
+
 ---
 
 ## Development

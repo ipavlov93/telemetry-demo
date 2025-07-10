@@ -13,8 +13,6 @@ COPY telemetry-node/go.mod telemetry-node/go.sum ./telemetry-node/
 COPY telemetry-sink/go.mod telemetry-sink/go.sum ./telemetry-sink/
 COPY pkg/go.mod pkg/go.sum ./pkg/
 
-#WORKDIR /app/telemetry-node
-
 RUN go mod download
 
 # Copy the source code
@@ -23,7 +21,7 @@ COPY telemetry-sink/ ./telemetry-sink/
 COPY pkg/ ./pkg/
 
 # Build the Go binary
-RUN go build -o telemetry-sink-app ./telemetry-node/cmd
+RUN go build -o telemetry-sink-app ./telemetry-sink/cmd
 
 # --- Runtime image ---
 FROM alpine:latest

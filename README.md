@@ -3,7 +3,12 @@
 Telemetry-demo is mono repository.
 
 Telemetry-demo consists of Go modules: telemetry-sink, telemetry-node, pkg.
+
 Go workspace and modules has been used to simplify development.
+
+## Demo branch
+
+The actual branch for demo (with latest changes) `branch-for-demo`: https://github.com/ipavlov93/telemetry-demo/tree/branch-for-demo
 
 ---
 

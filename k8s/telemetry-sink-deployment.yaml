@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telemetry-sink-deployment
+  labels:
+    app: telemetry-sink
+spec:
+  selector:
+    matchLabels:
+      app: telemetry-sink
+  template:
+    metadata:
+      labels:
+        app: telemetry-sink
+    spec:
+      containers:
+        - name: telemetry-sink
+          image: ipavlov93/telemetry-sink:latest # change 'latest' to a specific version for production
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: telemetry-sink-env # Reference to a ConfigMap containing environment variables
+          ports:
+            - containerPort: 8000 # Port the application listens on inside the container
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"

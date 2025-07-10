@@ -25,11 +25,29 @@ docker build --no-cache -f telemetry-node/docker/Dockerfile -t telemetry-node:la
 docker run --env-file ./telemetry-node/.env telemetry-node
 `
 
+#### Create and push tag
+
+Build docker image using docker build from previous section.
+Push image to docker registry (DockerHub by default).
+
+[//]: # (here some steps omitted related to docker push tag to docker registry)
+
 ### Deploy to K8s cluster
 
-1. Build docker image using docker build from previous section.
-// here some steps omitted related to docker push tag to docker registry
-2. Apply deployment:
+1. Pull latest docker image for this demo:
+
+`
+   docker pull 93catdog/telemetry-node:latest
+`
+
+2. Create env config map. Ensure that name is the same as in telemetry-node-deployment.yaml and .env file exists with given path.
+
+`
+kubectl create configmap telemetry-node-env \
+--from-env-file=.env
+`
+
+3. Apply deployment:
 
 `
 kubectl apply -f k8s/telemetry-node-deployment.yaml

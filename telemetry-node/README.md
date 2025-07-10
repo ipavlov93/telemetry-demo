@@ -8,7 +8,7 @@ Go app designed as two-stage pipeline using workers and channel.
 
 ### env file
 
-1. Create copy of [.env.local](.env.example) file.
+1. Create copy of [.env.example](.env.example) file.
 2. Set values depends on your environment.
 
 ### Run docker container
@@ -27,9 +27,9 @@ docker run --env-file ./telemetry-node/.env telemetry-node
 
 ### Deploy to K8s cluster
 
-0. Build docker image using docker build from previous section.
+1. Build docker image using docker build from previous section.
 // here some steps omitted related to docker push tag to docker registry
-1. Apply deployment:
+2. Apply deployment:
 
 `
 kubectl apply -f k8s/telemetry-node-deployment.yaml
@@ -57,22 +57,13 @@ App designed as two-stage pipeline using workers and channel.
     - Data buffered before sent, data send occurs when buffer is full.
     - SensorService doesn't drain remaining messages from channel if context is cancelled.
 
-## TODO
-
-Future improvements:
-1. Enable TLS for network communication.
-2. Add custom implementation of retry strategy with transport connection reestablishment and exponential backoff.
-3. Add hardcoded variables in main() to config.
-4. Add gRPC client configuration options to config.
-5. Add IntervalSensor RPS configuration to config.
-
 ### Components
 
 #### Interval Sensor
 
 Interval Sensor produces data by separate go routine (worker) with constant rate using Run().
 Produced data are buffered and send to channel when buffer is full.
-Buffered channel is used to achieve unblocked worker state.
+Buffered channel is used to prevent immediate block on channel send operation.
 
 #### SensorService
 
@@ -90,3 +81,15 @@ Retry mechanism partially resolve issue with network instability.
 The default gRPC retry mechanism does not re-establish broken connections (e.g., when the server is unreachable).
 RPC calls retry on failure with respect to the following status codes: Unavailable, ResourceExhausted, DeadlineExceeded.
 The caller is responsible for ensuring that context lifetimes are long enough to support full retry cycles.
+
+---
+
+## TODO
+
+Future improvements:
+1. Enable TLS for network communication.
+2. Add custom implementation of retry strategy with transport connection reestablishment and exponential backoff.
+3. Add hardcoded variables in main() to config.
+4. Add gRPC client configuration options to config.
+5. Add IntervalSensor RPS configuration to config.
+6. Add more tests.

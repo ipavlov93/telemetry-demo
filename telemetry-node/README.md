@@ -34,10 +34,13 @@ Push image to docker registry (DockerHub by default).
 
 ### Deploy to K8s cluster
 
+Here is simple solution. It's recommended to separate helm values for different environments.
+Commands arguments you will pass can be different depends on your path.
+
 1. Pull latest docker image for this demo:
 
 `
-   docker pull 93catdog/telemetry-node:latest
+   docker pull 93catdog/telemetry-node:demo
 `
 
 2. Create env config map. Ensure that name is the same as in telemetry-node-deployment.yaml and .env file exists with given path.
@@ -47,10 +50,24 @@ kubectl create configmap telemetry-node-env \
 --from-env-file=.env
 `
 
-3. Apply deployment:
+3. Apply deployments with values using helm:
 
 `
-kubectl apply -f k8s/telemetry-node-deployment.yaml
+cd k8s/telemetry-node
+helm install telemetry-node ./charts -f ../values/values.yaml
+`
+
+or
+
+`
+cd k8s/telemetry-node
+helm upgrade telemetry-node ./charts -f ../values/values.yaml
+`
+
+5. Check pods are running:
+
+`
+kubectl get pods -l app=telemetry-sink
 `
 
 ---

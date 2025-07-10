@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: telemetry-node
-          image: ghcr.io/ipavlov93/telemetry-node:latest # change 'latest' to a specific version for production
+          image: 93catdog/telemetry-node:latest # change 'latest' to a specific version for production
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
@@ -30,5 +30,3 @@ spec:
             requests:
               cpu: "100m"
               memory: "128Mi"
-      imagePullSecrets:
-        - name: docker-registry-secret

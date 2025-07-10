@@ -49,6 +49,12 @@ func New(w io.Writer, logLevel zapcore.Level) *ZapLogger {
 	return &ZapLogger{logger: logger}
 }
 
+// NewWithCore creates a ZapLogger with given zapcore.Core and zap.Option slice.
+func NewWithCore(core zapcore.Core, options ...zap.Option) *ZapLogger {
+	logger := zap.New(core, options...).WithOptions(zap.AddCallerSkip(1))
+	return &ZapLogger{logger: logger}
+}
+
 // Sync calls the underlying Sync method, flushing any buffered log entries.
 // Applications should take care to call Sync before exiting.
 func (z *ZapLogger) Sync() error { return z.logger.Sync() }

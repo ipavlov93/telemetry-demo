@@ -15,8 +15,12 @@ spec:
     spec:
       containers:
         - name: telemetry-sink
-          image: ipavlov93/telemetry-sink:latest # change 'latest' to a specific version for production
+          image: 93catdog/telemetry-sink:demo # change 'latest' to a specific version for production
           imagePullPolicy: IfNotPresent
+          env:
+            - name: GRPC_SERVER_SOCKET
+              # This variable should tell the gRPC server to listen on all interfaces at the specified port.
+              value: "0.0.0.0:{{ .Values.grpcServer.port }}"
           envFrom:
             - configMapRef:
                 name: telemetry-sink-env # Reference to a ConfigMap containing environment variables

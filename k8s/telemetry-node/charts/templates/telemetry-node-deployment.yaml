@@ -16,8 +16,11 @@ spec:
     spec:
       containers:
         - name: telemetry-node
-          image: 93catdog/telemetry-node:latest # change 'latest' to a specific version for production
+          image: 93catdog/telemetry-node:demo # change 'latest' to a specific version for production
           imagePullPolicy: IfNotPresent
+          env:
+            - name: GRPC_SERVER_SOCKET
+              value: "telemetry-sink-service:{{ .Values.grpcServer.port }}"
           envFrom:
             - configMapRef:
                 name: telemetry-node-env # Reference to a ConfigMap containing environment variables

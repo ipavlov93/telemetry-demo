@@ -1,0 +1,4 @@
+ports:
+  - name: telemetry-sink-service
+    port: {{ .Values.grpcServer.port }}
+    targetPort: {{ .Values.grpcServer.port }}

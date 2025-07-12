@@ -74,7 +74,7 @@ kubectl get pods -l app=telemetry-sink
 
 ## Run tests
 
-There are unit few unit tests for this project.
+There are few unit tests for this project.
 It's recommended to run the tests using this command:
 `go test ./... -race -count 1`
 

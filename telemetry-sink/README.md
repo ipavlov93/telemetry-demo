@@ -57,9 +57,6 @@ cd k8s/telemetry-sink
 helm install telemetry-sink ./charts -f ../values/values.yaml
 `
 
-`
-kubectl apply -f k8s/telemetry-sink-service.yaml
-`
 or
 
 `
@@ -135,5 +132,10 @@ Current implementation doesn't drain input channel as part of graceful shutdown.
 ## TODO
 
 Future improvements:
-1. Add JsonWriter.Run drain input channel and write to file when parent context is done.
-2. Add tests.
+
+JsonWriter
+1. Add log file rotation strategy.
+2. Run should drain input channel and write to file when parent context is done.
+3. JsonWriter should supply file writer (logger) as dependency.
+
+Add tests.

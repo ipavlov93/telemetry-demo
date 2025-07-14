@@ -1,3 +1,0 @@
-env:
-  - name: GRPC_SERVER_SOCKET
-    value: "telemetry-sink:{{ .Values.grpcServer.port }}"

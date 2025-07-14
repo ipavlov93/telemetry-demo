@@ -1,2 +1,5 @@
 grpcServer:
   port: 50051
+
+telemetrySinkService:
+  name: telemetry-sink-service

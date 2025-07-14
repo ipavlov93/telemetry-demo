@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: telemetry-sink-service
+  name: {{ .Values.telemetrySinkService.name }}
   labels:
     app: telemetry-sink
 spec:

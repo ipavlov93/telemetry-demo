@@ -20,7 +20,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: GRPC_SERVER_SOCKET
-              value: "telemetry-sink-service:{{ .Values.grpcServer.port }}"
+              value: "{{ .Values.telemetrySinkService.name }}:{{ .Values.grpcServer.port }}"
           envFrom:
             - configMapRef:
                 name: telemetry-node-env # Reference to a ConfigMap containing environment variables

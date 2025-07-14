@@ -105,12 +105,14 @@ func main() {
 
 	// Block until a signal is received or context is cancelled
 	select {
+	case <-ctx.Done():
+		lg.Info("Main: parent context is done")
 	case <-signalCh:
 		lg.Info("Main routine received signal. Starting graceful shutdown")
 		cancel() // cancel the context to signal other goroutines to stop
-
-		grpcServer.GracefulStop() // stopping the Server
 	}
+
+	grpcServer.GracefulStop() // stopping the Server
 
 	// Wait for other goroutines to stop
 	wg.Wait()

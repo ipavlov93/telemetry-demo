@@ -35,7 +35,21 @@ Push image to docker registry (DockerHub by default).
 ### Deploy to K8s cluster
 
 Here is simple solution. It's recommended to separate helm values for different environments.
-Commands arguments you will pass can be different depends on your path. 
+
+#### Notes
+.env file variable GRPC_SERVER_SOCKET would be reset during deploy to K8s cluster:
+
+value: " **:** {{ .Values.grpcServer.port }}"  
+
+Go resolves empty host as both 0.0.0.0 and [::] to support IPv4 and IPv6.
+
+This variable value will tell the gRPC server to listen on all interfaces at the specified port.
+
+**Important**: This opens your gRPC server to local containers that is not recommended for production.
+
+---
+
+Command line arguments can be different depends on your path.
 
 1. Pull latest docker image for this demo:
 
@@ -43,23 +57,32 @@ Commands arguments you will pass can be different depends on your path.
    docker pull 93catdog/telemetry-sink:demo
 `
 
-2. Create env config map. Ensure that name is the same as in telemetry-sink-deployment.yaml and .env file exists with given path.
+2. Create namespace in K8s cluster (if it does not exist):
+
+`
+kubectl config set-context --current --namespace=telemetry-demo
+`
+
+3. Set current namespace:
+
+`
+kubectl create namespace telemetry-demo
+`
+
+4. Create env config map. Ensure that name is the same as in telemetry-sink-deployment.yaml and .env file exists with given path.
 
 `
 kubectl create configmap telemetry-sink-env \
 --from-env-file=.env
 `
 
-3. Apply deployments with values using helm:
+5. Apply deployments with values using helm:
 
 `
 cd k8s/telemetry-sink
 helm install telemetry-sink ./charts -f ../values/values.yaml
 `
 
-`
-kubectl apply -f k8s/telemetry-sink-service.yaml
-`
 or
 
 `
@@ -67,19 +90,19 @@ cd k8s/telemetry-sink
 helm upgrade telemetry-sink ./charts -f ../values/values.yaml
 `
 
-4. Check service is running:
+6. Check service is running:
 
 `
 kubectl get services -l app=telemetry-sink
 `
 
-5. Check pod is running:
+7. Check pod is running:
 
 `
 kubectl get pods -l app=telemetry-sink
 `
 
-6. Copy app container directory (with .log.json file) to your local path:
+8. Copy app container directory (with .log.json file) to your local path (after request is made to the server):
 
 `
 kubectl cp telemetry-sink-deployment-hash:/app <your_path>
@@ -96,6 +119,7 @@ There are no any tests for this project.
 ## Concept
 
 App designed as three-stage pipeline using workers and channel.
+
 Buffered channels are used to prevent immediate block on channel send operation.
 
 1. Server send all incoming messages to buffered channel.
@@ -106,12 +130,14 @@ Buffered channels are used to prevent immediate block on channel send operation.
 
 #### Server
 
-Server represent component that implements gRPC SensorServiceServer. It has single RPC handler SendSensorValues.
+Server represent component that implements gRPC SensorServiceServer with single RPC handler SendSensorValues.
+
 SendSensorValues handler sends all incoming messages to buffered channel.
 
 #### gRPC server configuration
 
 gRPC server configured to process requests with given allowed bandwidth (rate limit in bytes/sec) using ByteRateLimiterInterceptor.
+
 If data flow rate exceeds the allowed bandwidth it will drop incoming messages with following status codes: ResourceExhausted.
 
 #### BufferedProcessor
@@ -126,7 +152,9 @@ It Flushes messages on such events:
 #### JsonWriter
 
 JsonWriter represent component that write telemetry messages to a JSON file on each receive from input channel using Run().
+
 Messages are written as a separate log line to file using pkg/logger (zap.Logger).
+
 Notice: actual logs format is different from JSON.
 Current implementation doesn't drain input channel as part of graceful shutdown.
 

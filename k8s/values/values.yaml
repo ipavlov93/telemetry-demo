@@ -1,2 +1,8 @@
 grpcServer:
+  # This variable can tell the gRPC server to listen on all interfaces at the specified port.
+  # Important: This opens your gRPC server to local containers that is not recommended for production.
+  host:  # Go resolves empty host as both 0.0.0.0 and [::] to support IPv4 and IPv6
   port: 50051
+
+telemetrySinkService:
+  name: telemetry-sink-service

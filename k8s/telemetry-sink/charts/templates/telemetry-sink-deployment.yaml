@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: telemetry-sink-deployment
+  name: {{ .Values.telemetrySinkService.name }}
   labels:
     app: telemetry-sink
 spec:
@@ -19,8 +19,9 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: GRPC_SERVER_SOCKET
-              # This variable should tell the gRPC server to listen on all interfaces at the specified port.
-              value: "0.0.0.0:{{ .Values.grpcServer.port }}"
+              value: "{{ .Values.grpcServer.host }}:{{ .Values.grpcServer.port }}"
+          # value: "0.0.0.0:{{ .Values.grpcServer.port }}"
+          # value: ":{{ .Values.grpcServer.port }}"
           envFrom:
             - configMapRef:
                 name: telemetry-sink-env # Reference to a ConfigMap containing environment variables

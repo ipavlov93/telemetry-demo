@@ -57,23 +57,32 @@ Command line arguments can be different depends on your path.
    docker pull 93catdog/telemetry-sink:demo
 `
 
-2. Create env config map. Ensure that name is the same as in telemetry-sink-deployment.yaml and .env file exists with given path.
+2. Create namespace in K8s cluster (if it does not exist):
+
+`
+kubectl config set-context --current --namespace=telemetry-demo
+`
+
+3. Set current namespace:
+
+`
+kubectl create namespace telemetry-demo
+`
+
+4. Create env config map. Ensure that name is the same as in telemetry-sink-deployment.yaml and .env file exists with given path.
 
 `
 kubectl create configmap telemetry-sink-env \
 --from-env-file=.env
 `
 
-3. Apply deployments with values using helm:
+5. Apply deployments with values using helm:
 
 `
 cd k8s/telemetry-sink
 helm install telemetry-sink ./charts -f ../values/values.yaml
 `
 
-`
-kubectl apply -f k8s/telemetry-sink-service.yaml
-`
 or
 
 `
@@ -81,19 +90,19 @@ cd k8s/telemetry-sink
 helm upgrade telemetry-sink ./charts -f ../values/values.yaml
 `
 
-4. Check service is running:
+6. Check service is running:
 
 `
 kubectl get services -l app=telemetry-sink
 `
 
-5. Check pod is running:
+7. Check pod is running:
 
 `
 kubectl get pods -l app=telemetry-sink
 `
 
-6. Copy app container directory (with .log.json file) to your local path:
+8. Copy app container directory (with .log.json file) to your local path (after request is made to the server):
 
 `
 kubectl cp telemetry-sink-deployment-hash:/app <your_path>

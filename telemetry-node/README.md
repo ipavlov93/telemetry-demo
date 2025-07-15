@@ -51,14 +51,26 @@ Command line arguments can be different depends on your path.
    docker pull 93catdog/telemetry-node:demo
 `
 
-2. Create env config map. Ensure that name is the same as in telemetry-node-deployment.yaml and .env file exists with given path.
+2. Create namespace in K8s cluster (if it does not exist):
+
+`
+kubectl config set-context --current --namespace=telemetry-demo
+`
+
+3. Set current namespace:
+
+`
+kubectl create namespace telemetry-demo
+`
+
+4. Create env config map. Ensure that name is the same as in telemetry-node-deployment.yaml and .env file exists with given path.
 
 `
 kubectl create configmap telemetry-node-env \
 --from-env-file=.env
 `
 
-3. Apply deployments with values using helm:
+5. Apply deployments with values using helm:
 
 `
 cd k8s/telemetry-node
@@ -72,7 +84,7 @@ cd k8s/telemetry-node
 helm upgrade telemetry-node ./charts -f ../values/values.yaml
 `
 
-5. Check pods are running:
+6. Check pods are running:
 
 `
 kubectl get pods -l app=telemetry-sink

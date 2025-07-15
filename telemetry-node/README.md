@@ -87,7 +87,7 @@ helm upgrade telemetry-node ./charts -f ../values/values.yaml
 6. Check pods are running:
 
 `
-kubectl get pods -l app=telemetry-sink
+kubectl get pods -l app=telemetry-node
 `
 
 ---

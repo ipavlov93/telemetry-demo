@@ -35,7 +35,15 @@ Push image to docker registry (DockerHub by default).
 ### Deploy to K8s cluster
 
 Here is simple solution. It's recommended to separate helm values for different environments.
-Commands arguments you will pass can be different depends on your path.
+
+#### Notes
+.env file variable GRPC_SERVER_SOCKET would be reset during deploy to K8s cluster:
+
+value: "{{ .Values.telemetrySinkService.name }} **:** {{ .Values.grpcServer.port }}"
+
+---
+
+Command line arguments can be different depends on your path.
 
 1. Pull latest docker image for this demo:
 
@@ -76,6 +84,7 @@ kubectl get pods -l app=telemetry-sink
 
 There are few unit tests for this project.
 It's recommended to run the tests using this command:
+
 `go test ./... -race -count 1`
 
 ---
@@ -97,13 +106,16 @@ App designed as two-stage pipeline using workers and channel.
 #### Interval Sensor
 
 Interval Sensor produces data by separate go routine (worker) with constant rate using Run().
+
 Produced data are buffered and send to channel when buffer is full.
+
 Buffered channel is used to prevent immediate block on channel send operation.
 
 #### SensorService
 
 SensorService is designed consumes data from channel and sends data to destination server using corresponding client.
-SensorService doesn't retry reestablish connection on transport-level failures (when server is unreachable).
+
+[//]: # (SensorService doesn't retry reestablish connection on transport-level failures &#40;when server is unreachable&#41;.)
 
 #### Sender worker
 
@@ -112,9 +124,13 @@ Rate Limiter (token-based setup) is used to achieve send messages with given RPS
 #### gRPC client configuration
 
 gRPC client configured to send requests with given RPS and constant interval retry strategy. 
-Retry mechanism partially resolve issue with network instability.
-The default gRPC retry mechanism does not re-establish broken connections (e.g., when the server is unreachable).
+
+Retry strategy resolves the issue with network instability.
+
+[//]: # (The default gRPC retry mechanism does not re-establish broken connections &#40;e.g., when the server is unreachable&#41;.)
+
 RPC calls retry on failure with respect to the following status codes: Unavailable, ResourceExhausted, DeadlineExceeded.
+
 The caller is responsible for ensuring that context lifetimes are long enough to support full retry cycles.
 
 ---

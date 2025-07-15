@@ -37,6 +37,7 @@ There are several options how you can run this mono repository's apps using:
 3. K8s cluster and basic tools (helm, kubectl, etc.)
 
 You can find how to configure and run apps in corresponding documentation.
+
 Notice: .env file variable GRPC_SERVER_SOCKET would be reset during deploy to K8s cluster. 
 
 ---

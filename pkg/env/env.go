@@ -6,9 +6,8 @@ import (
 	"time"
 )
 
-// EnvironmentVariable tries to lookup env variable by given key.
-// If lookup is successful, it returns parsed value.
-// Otherwise, returns default value (fallback).
+// EnvironmentVariable returns env variable by given key.
+// Otherwise, returns fallback.
 func EnvironmentVariable(key string, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
@@ -16,9 +15,8 @@ func EnvironmentVariable(key string, fallback string) string {
 	return fallback
 }
 
-// ParseIntEnv tries to lookup and parse env variable by given key.
-// If lookup and parse are successful, it returns parsed value.
-// Otherwise, returns default value (fallback).
+// ParseIntEnv lookups and parse env variable by given key.
+// Otherwise, returns fallback.
 func ParseIntEnv(key string, fallback int) int {
 	value, ok := os.LookupEnv(key)
 	if !ok {
@@ -31,9 +29,8 @@ func ParseIntEnv(key string, fallback int) int {
 	return int(parsedValue)
 }
 
-// ParseUintEnv tries to lookup and parse env variable by given key.
-// If lookup and parse are successful, it returns parsed value.
-// Otherwise, returns default value (fallback).
+// ParseUintEnv lookups and parse env variable by given key.
+// Otherwise, returns fallback.
 func ParseUintEnv(key string, fallback uint) uint {
 	value, ok := os.LookupEnv(key)
 	if !ok {
@@ -46,9 +43,8 @@ func ParseUintEnv(key string, fallback uint) uint {
 	return uint(parsedValue)
 }
 
-// ParseDurationEnv tries to lookup and parse env variable by given key.
-// If lookup and parse are successful, it returns parsed value.
-// Otherwise, returns default value (fallback).
+// ParseDurationEnv lookups and parse env variable by given key.
+// Otherwise, returns fallback.
 // Important: valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 func ParseDurationEnv(key string, fallback time.Duration) time.Duration {
 	value, ok := os.LookupEnv(key)
@@ -62,9 +58,8 @@ func ParseDurationEnv(key string, fallback time.Duration) time.Duration {
 	return parsedValue
 }
 
-// ParseFloat32Env tries to lookup and parse env variable by given key.
-// If lookup and parse are successful, it returns parsed value.
-// Otherwise, returns default value (fallback).
+// ParseFloat32Env lookups and parse env variable by given key.
+// Otherwise, returns fallback.
 func ParseFloat32Env(key string, fallback float32) float32 {
 	value, ok := os.LookupEnv(key)
 	if !ok {

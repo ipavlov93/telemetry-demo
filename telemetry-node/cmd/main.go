@@ -31,6 +31,8 @@ const (
 	defaultRequestRatePerSecond = 1
 
 	perRetryTimeout = 100 * time.Millisecond
+
+	gracefulShutdown = time.Second
 )
 
 func main() {
@@ -56,7 +58,7 @@ func main() {
 		lg.Fatal("failed to initialize sampling rate", zap.Error(err))
 	}
 
-	intervalSensor, err := simulator.NewWithRate(
+	sensorSimulator, err := simulator.NewWithRate(
 		func() int64 {
 			return rand.Int64N(int64(2 << 16))
 		},
@@ -70,8 +72,8 @@ func main() {
 	}
 
 	// Important:
-	// if totalTimeoutPerRPCall <= perRetryTimeout then retryStrategy will never run
-	totalTimeoutPerRPCall := timeout.TotalTimeout(perRetryTimeout, appConfig.GrpcClientMaxRetryAttempts)
+	// if totalTimeoutRPC <= perRetryTimeout then retryStrategy will never run
+	totalTimeoutRPC := timeout.TotalTimeout(perRetryTimeout, appConfig.GrpcClientMaxRetryAttempts)
 
 	grpcClientOptions := []grpc.DialOption{
 		// Important: insecure is allowed to use only for local development
@@ -119,33 +121,25 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	// Run intervalSensor worker
-	valuesChan, err := intervalSensor.Run(ctx, &wg)
+	// Run sensorSimulator worker
+	valuesChan, err := sensorSimulator.Run(ctx, &wg)
 	if err != nil {
 		lg.Fatal("failed to run SensorSimulator", zap.Error(err))
 	}
 
-	// Run send worker
-	go func(rpcCallTimeout time.Duration, wg *sync.WaitGroup) {
-		defer wg.Done()
+	serviceRunConfig := service.NewRunConfig(
+		valuesChan,
+		totalTimeoutRPC,
+		limiter,
+		gracefulShutdown,
+		&wg,
+	)
+	if !serviceRunConfig.Valid() {
+		lg.Fatal("invalid sensorService.Run configuration")
+	}
 
-		for {
-			select {
-			case <-ctx.Done():
-				lg.Debug("send worker received context done, returning")
-				return
-			default:
-				// Block until the rate limiter allows sending the next request
-				err = limiter.Wait(context.Background())
-				if err != nil {
-					lg.Error("Rate limiter wait interrupted", zap.Error(err))
-					return
-				}
-				sensorService.SendSensorValues(ctx, rpcCallTimeout, valuesChan)
-			}
-		}
-	}(totalTimeoutPerRPCall, &wg)
-	wg.Add(1)
+	// Run send worker
+	sensorService.Run(ctx, serviceRunConfig)
 
 	select {
 	case <-ctx.Done():

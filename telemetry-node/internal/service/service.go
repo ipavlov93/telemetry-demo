@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	sensorapi "github.com/ipavlov93/telemetry-demo/pkg/grpc/generated/v1/sensor_service"
@@ -28,36 +29,104 @@ func NewSensorService(
 	}
 }
 
-// SendSensorValues consumes sensor values (single slice) from the input channel and sends them using corresponding client.
+// sendRequest sends request using corresponding client and ignores errors.
 // timeoutDuration is total timeout per RPC call (including retry attempts).
-// Notice: it won't drain remaining messages from channel if context is cancelled.
-func (s *SensorService) SendSensorValues(
-	parentCtx context.Context,
-	timeoutDuration time.Duration,
-	input <-chan []measurement.SensorValue,
+func (s *SensorService) sendRequest(
+	ctx context.Context,
+	sensorValues []measurement.SensorValue,
+	limiter RateLimiter,
+	timeout time.Duration,
 ) {
-	for {
-		select {
-		case <-parentCtx.Done():
-			s.logger.Debug("SensorService received context done, returning")
-			return
-		case sensorValues, ok := <-input:
-			if !ok {
-				s.logger.Debug("SensorService input channel closed")
+	// Block until the rate limiter allows sending the next request
+	err := limiter.Wait(context.Background())
+	if err != nil {
+		s.logger.Error("Rate limiter wait interrupted", zap.Error(err))
+		return
+	}
+
+	reqCtx, reqCancel := context.WithTimeout(ctx, timeout)
+
+	_, err = s.sensorClient.SendSensorValues(reqCtx,
+		mapper.ToProtoRequest(sensorValues),
+	)
+	if err != nil {
+		statusCode := status.Convert(err)
+		s.logger.Debug("SensorServiceClient.SendSensorValues failed",
+			zap.Uint32("status_code", uint32(statusCode.Code())),
+			zap.String("message", statusCode.Message()),
+		)
+	}
+	reqCancel()
+}
+
+// Run starts send requests using corresponding client in a separate goroutine.
+// It will start graceful shutdown when the parent context is done (via <-ctx.Done()).
+func (s *SensorService) Run(
+	parentCtx context.Context,
+	config *RunConfig,
+) {
+	wg := config.wg
+	if wg != nil {
+		wg.Add(1)
+	}
+
+	go func() {
+		defer func() {
+			if wg == nil {
 				return
 			}
-			ctx, cancel := context.WithTimeout(parentCtx, timeoutDuration)
-			_, err := s.sensorClient.SendSensorValues(ctx,
-				mapper.ToProtoRequest(sensorValues),
-			)
-			if err != nil {
-				statusCode := status.Convert(err)
-				s.logger.Debug("SensorServiceClient.SendSensorValues failed",
-					zap.Uint32("status_code", uint32(statusCode.Code())),
-					zap.String("message", statusCode.Message()),
+			wg.Done()
+		}()
+
+		for {
+			select {
+			case <-parentCtx.Done():
+				// minimal timeout context supports
+				if config.gracefulShutdown < gracefulShutdownMinDuration {
+					return
+				}
+				s.logger.Debug("SensorService.Run has started gracefulShutdown")
+				s.gracefulShutdown(config)
+				return
+			case sensorValues, ok := <-config.valuesChan:
+				if !ok {
+					return
+				}
+				s.sendRequest(
+					parentCtx,
+					sensorValues,
+					config.limiter,
+					config.totalTimeoutRPC,
 				)
 			}
-			cancel()
 		}
-	}
+	}()
+}
+
+func (s *SensorService) gracefulShutdown(config *RunConfig) {
+	var once sync.Once
+	once.Do(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), config.gracefulShutdown)
+		defer cancel()
+
+		for {
+			select {
+			case <-ctx.Done():
+				s.logger.Debug("Graceful shutdown context expired")
+				return
+			case sensorValues, ok := <-config.valuesChan:
+				if !ok {
+					return
+				}
+				reqCtx, reqCancel := context.WithTimeout(ctx, config.totalTimeoutRPC)
+				s.sendRequest(
+					reqCtx,
+					sensorValues,
+					config.limiter,
+					config.totalTimeoutRPC,
+				)
+				reqCancel()
+			}
+		}
+	})
 }

@@ -18,15 +18,15 @@ const (
 	defaultChannelCapacity = 100
 )
 
-// SensorSimulator simulates real sensor that emits values with given interval.
+// SensorSimulator simulates real sensor that emits values with given delay.
 type SensorSimulator struct {
 	Name         string
 	generateFunc func() int64
 	// delay duration between generateFunc call
-	interval time.Duration
+	delay time.Duration
 	// number of values to store before sending
 	bufferSize int
-	ChannelCap int
+	channelCap int
 	logger     logger.Logger
 }
 
@@ -51,20 +51,20 @@ func NewWithRate(
 	)
 }
 
-// New constructor allows to create instance with zero interval (without delay).
+// New constructor allows to create instance with zero delay (without delay).
 // Constructor will return error if:
-// - interval is below zero;
+// - delay is below zero;
 // - generateFunc is nil.
 func New(
 	generateFunc func() int64,
-	interval time.Duration,
+	delay time.Duration,
 	bufferSize int,
 	name string,
 	channelCap int,
 	lg logger.Logger,
 ) (*SensorSimulator, error) {
-	if interval < 0 {
-		return nil, fmt.Errorf("can't init SensorSimulator, interval is invalid")
+	if delay < 0 {
+		return nil, fmt.Errorf("can't init SensorSimulator, delay is invalid")
 	}
 	if generateFunc == nil {
 		return nil, fmt.Errorf("can't init SensorSimulator, generateFunc is nil")
@@ -86,9 +86,9 @@ func New(
 
 	return &SensorSimulator{
 		Name:         sensorName,
-		interval:     interval,
+		delay:        delay,
 		bufferSize:   actualSize,
-		ChannelCap:   actualChannelCap,
+		channelCap:   actualChannelCap,
 		generateFunc: generateFunc,
 		logger:       lg,
 	}, nil
@@ -101,7 +101,7 @@ func (s *SensorSimulator) Run(ctx context.Context, wg *sync.WaitGroup) (<-chan [
 		return nil, fmt.Errorf("can't generate value, generateFunc is nil")
 	}
 
-	valuesChan := make(chan []measurement.SensorValue, s.ChannelCap)
+	valuesChan := make(chan []measurement.SensorValue, s.channelCap)
 
 	if wg != nil {
 		wg.Add(1)
@@ -135,7 +135,7 @@ func (s *SensorSimulator) Run(ctx context.Context, wg *sync.WaitGroup) (<-chan [
 				}
 				s.logger.Debug("SensorSimulator received context done, returning")
 				return
-			case <-time.After(s.interval):
+			case <-time.After(s.delay):
 				buffer = append(buffer, measurement.SensorValue{
 					SensorName: s.Name,
 					Value:      s.generateFunc(),

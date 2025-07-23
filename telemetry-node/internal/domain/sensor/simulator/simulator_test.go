@@ -14,17 +14,17 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestIntervalSensor_Run(t *testing.T) {
-	intervalSeconds := 1
+func TestSensorSimulator_Run(t *testing.T) {
+	delaySeconds := 1
 	totalSeconds := 5
 	batchSize := 1
 	channelCap := 0
 	wg := sync.WaitGroup{}
 
-	t.Run("SensorSimulator.SendSensorValues() happy flow", func(t *testing.T) {
-		intervalSensor, err := simulator.New(
+	t.Run("happy flow", func(t *testing.T) {
+		sensorSimulator, err := simulator.New(
 			randomValue,
-			time.Duration(intervalSeconds)*time.Second,
+			time.Duration(delaySeconds)*time.Second,
 			batchSize,
 			"",
 			channelCap,
@@ -37,7 +37,7 @@ func TestIntervalSensor_Run(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		valuesChan, err := intervalSensor.Run(ctx, &wg)
+		valuesChan, err := sensorSimulator.Run(ctx, &wg)
 		assert.NoError(t, err)
 
 		var values []measurement.SensorValue
@@ -45,14 +45,14 @@ func TestIntervalSensor_Run(t *testing.T) {
 			values = append(values, value...)
 		}
 
-		assert.Equal(t, totalSeconds/intervalSeconds, len(values))
+		assert.Equal(t, totalSeconds/delaySeconds, len(values))
 	})
 	t.Run("should gracefully send partial batch before context cancellation", func(t *testing.T) {
 		batchSize = 5
 
-		intervalSensor, err := simulator.New(
+		sensorSimulator, err := simulator.New(
 			randomValue,
-			time.Duration(intervalSeconds)*time.Second,
+			time.Duration(delaySeconds)*time.Second,
 			batchSize,
 			"",
 			channelCap,
@@ -66,7 +66,7 @@ func TestIntervalSensor_Run(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeoutMillisecond)
 		defer cancel()
 
-		valuesChan, err := intervalSensor.Run(ctx, &wg)
+		valuesChan, err := sensorSimulator.Run(ctx, &wg)
 		assert.NoError(t, err)
 
 		var values []measurement.SensorValue
@@ -74,12 +74,12 @@ func TestIntervalSensor_Run(t *testing.T) {
 			values = append(values, value...)
 		}
 
-		assert.Equal(t, milliseconds/intervalSeconds/1000, len(values))
+		assert.Equal(t, milliseconds/delaySeconds/1000, len(values))
 	})
 	t.Run("sender should close channel after generateFunc panic", func(t *testing.T) {
-		intervalSensor, err := simulator.New(
+		sensorSimulator, err := simulator.New(
 			randomPanic,
-			time.Duration(intervalSeconds)*time.Second,
+			time.Duration(delaySeconds)*time.Second,
 			batchSize,
 			"",
 			channelCap,
@@ -87,7 +87,7 @@ func TestIntervalSensor_Run(t *testing.T) {
 		)
 		assert.NoError(t, err)
 
-		valuesChan, err := intervalSensor.Run(context.Background(), &wg)
+		valuesChan, err := sensorSimulator.Run(context.Background(), &wg)
 		assert.NoError(t, err)
 
 		for range valuesChan {
@@ -96,12 +96,12 @@ func TestIntervalSensor_Run(t *testing.T) {
 	})
 }
 
-func TestIntervalSensor_NewIntervalSensor(t *testing.T) {
+func TestSensorSimulator_New(t *testing.T) {
 	batchSize := 1
 	channelCap := 0
 
-	t.Run("should return nil error when interval is zero", func(t *testing.T) {
-		intervalSensor, err := simulator.New(
+	t.Run("should return nil error when delay is zero", func(t *testing.T) {
+		sensorSimulator, err := simulator.New(
 			randomValue,
 			0,
 			batchSize,
@@ -111,10 +111,10 @@ func TestIntervalSensor_NewIntervalSensor(t *testing.T) {
 		)
 
 		assert.NoError(t, err)
-		assert.NotEmpty(t, intervalSensor)
+		assert.NotEmpty(t, sensorSimulator)
 	})
-	t.Run("should return error when interval is below zero", func(t *testing.T) {
-		intervalSensor, err := simulator.New(
+	t.Run("should return error when delay is below zero", func(t *testing.T) {
+		sensorSimulator, err := simulator.New(
 			randomValue,
 			-5,
 			batchSize,
@@ -124,10 +124,10 @@ func TestIntervalSensor_NewIntervalSensor(t *testing.T) {
 		)
 
 		assert.Error(t, err)
-		assert.Nil(t, intervalSensor)
+		assert.Nil(t, sensorSimulator)
 	})
 	t.Run("should return an error when generateFunc is nil", func(t *testing.T) {
-		intervalSensor, err := simulator.New(
+		sensorSimulator, err := simulator.New(
 			nil,
 			0,
 			batchSize,
@@ -137,11 +137,11 @@ func TestIntervalSensor_NewIntervalSensor(t *testing.T) {
 		)
 
 		assert.Error(t, err)
-		assert.Nil(t, intervalSensor)
+		assert.Nil(t, sensorSimulator)
 	})
 }
 
-func TestIntervalSensor_NewRateSensor(t *testing.T) {
+func TestSensorSimulator_NewWithRate(t *testing.T) {
 	ratePerSecond, _ := rate.New(5.0, time.Second)
 	channelCap := 0
 

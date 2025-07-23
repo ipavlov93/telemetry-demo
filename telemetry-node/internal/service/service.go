@@ -2,17 +2,14 @@ package service
 
 import (
 	"context"
-	"strconv"
 	"time"
 
-	sensorpb "github.com/ipavlov93/telemetry-demo/pkg/grpc/generated/v1/sensor"
 	sensorapi "github.com/ipavlov93/telemetry-demo/pkg/grpc/generated/v1/sensor_service"
 	"github.com/ipavlov93/telemetry-demo/pkg/logger"
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/measurement"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/mapper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // SensorService represents component that is responsible for delivery to destination server.
@@ -21,8 +18,6 @@ type SensorService struct {
 	logger       logger.Logger
 }
 
-// NewSensorService returns pointer to created instance of SensorService.
-// It skips logger validation.
 func NewSensorService(
 	sensorClient sensorapi.SensorServiceClient,
 	lg logger.Logger,
@@ -39,7 +34,7 @@ func NewSensorService(
 func (s *SensorService) SendSensorValues(
 	parentCtx context.Context,
 	timeoutDuration time.Duration,
-	input <-chan []domain.SensorValue,
+	input <-chan []measurement.SensorValue,
 ) {
 	for {
 		select {
@@ -51,48 +46,18 @@ func (s *SensorService) SendSensorValues(
 				s.logger.Debug("SensorService input channel closed")
 				return
 			}
-
-			// prepare request
-			req := toProtoRequest(sensorValues)
-
-			// Notice:
-			// individual context is passed per RPC call
-			ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
-			defer cancel()
-
-			// send attempt with retry
-			// there won't be any retry attempts if server is totally unavailable due network issues
-			_, err := s.sensorClient.SendSensorValues(ctx, req)
-			if err != nil {
-				st := status.Convert(err)
-				s.logger.Debug("SensorServiceClient.SendSensorValues failed",
-					zap.String(strconv.Itoa(int(status.Code(err))), st.Message()))
-
-				continue
-			}
-			s.logger.Debug("SensorServiceClient.SendSensorValues successful",
-				zap.Int("messageCount", len(sensorValues)),
+			ctx, cancel := context.WithTimeout(parentCtx, timeoutDuration)
+			_, err := s.sensorClient.SendSensorValues(ctx,
+				mapper.ToProtoRequest(sensorValues),
 			)
+			if err != nil {
+				statusCode := status.Convert(err)
+				s.logger.Debug("SensorServiceClient.SendSensorValues failed",
+					zap.Uint32("status_code", uint32(statusCode.Code())),
+					zap.String("message", statusCode.Message()),
+				)
+			}
+			cancel()
 		}
-	}
-}
-
-// toProtoRequest utility function set []domain.SensorValue to *sensorpb.SensorValuesRequest.
-func toProtoRequest(sensorValues []domain.SensorValue) *sensorpb.SensorValuesRequest {
-	valueBatches := make([]*sensorpb.SensorValue, len(sensorValues))
-	for i, v := range sensorValues {
-		valueBatches[i] = toProtoMessage(v)
-	}
-	return &sensorpb.SensorValuesRequest{Items: valueBatches}
-}
-
-// toProtoMessage utility function convert domain.SensorValue entity to *sensorpb.SensorValue DTO.
-func toProtoMessage(sensorValue domain.SensorValue) *sensorpb.SensorValue {
-	return &sensorpb.SensorValue{
-		SensorName: sensorValue.SensorName,
-		Measurement: &sensorpb.SensorValue_Measurement{
-			SensorValue: &wrapperspb.Int64Value{Value: sensorValue.Value},
-			CreatedAt:   timestamppb.New(sensorValue.Timestamp),
-		},
 	}
 }

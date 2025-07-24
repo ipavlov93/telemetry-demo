@@ -50,7 +50,7 @@ func (s *SensorService) sendRequest(
 	timeout time.Duration,
 ) {
 	// Block until the rate limiter allows sending the next request
-	err := s.limiter.Wait(ctx)
+	err := s.limiter.Wait(context.Background())
 	if err != nil {
 		s.logger.Error("Rate limiter wait interrupted", zap.Error(err))
 		return
@@ -76,7 +76,10 @@ func (s *SensorService) sendRequest(
 // It will start graceful shutdown:
 // - when parent context is done (via <-ctx.Done())
 // - if gracefulShutdown is bigger than config.totalTimeoutRPC.
-func (s *SensorService) Run(parentCtx context.Context, config *RunConfig) {
+func (s *SensorService) Run(parentCtx context.Context, config *RunConfig) error {
+	if config == nil {
+		return fmt.Errorf("config must be not nil")
+	}
 	wg := config.wg
 	if wg != nil {
 		wg.Add(1)
@@ -105,6 +108,7 @@ func (s *SensorService) Run(parentCtx context.Context, config *RunConfig) {
 			}
 		}
 	}()
+	return nil
 }
 
 func (s *SensorService) shutdown(config *RunConfig) {
@@ -114,8 +118,6 @@ func (s *SensorService) shutdown(config *RunConfig) {
 
 	var once sync.Once
 	once.Do(func() {
-		s.logger.Debug("SensorService has started shutdown")
-
 		ctx, cancel := context.WithTimeout(context.Background(), s.gracefulShutdown)
 		defer cancel()
 
@@ -124,9 +126,7 @@ func (s *SensorService) shutdown(config *RunConfig) {
 			return
 		}
 
-		reqCtx, reqCancel := context.WithTimeout(ctx, config.totalTimeoutRPC)
-		s.sendRequest(reqCtx, valuesBatch, config.totalTimeoutRPC)
-		reqCancel()
+		s.sendRequest(ctx, valuesBatch, config.totalTimeoutRPC)
 	})
 }
 

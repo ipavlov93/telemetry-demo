@@ -13,19 +13,24 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const gracefulShutdownMinDuration = 50 * time.Millisecond
+
 // SensorService represents component that is responsible for delivery to destination server.
 type SensorService struct {
-	sensorClient sensorapi.SensorServiceClient
-	logger       logger.Logger
+	sensorClient     sensorapi.SensorServiceClient
+	gracefulShutdown time.Duration
+	logger           logger.Logger
 }
 
 func NewSensorService(
 	sensorClient sensorapi.SensorServiceClient,
+	gracefulShutdown time.Duration,
 	lg logger.Logger,
 ) *SensorService {
 	return &SensorService{
-		sensorClient: sensorClient,
-		logger:       lg,
+		sensorClient:     sensorClient,
+		gracefulShutdown: gracefulShutdown,
+		logger:           lg,
 	}
 }
 
@@ -38,33 +43,31 @@ func (s *SensorService) sendRequest(
 	timeout time.Duration,
 ) {
 	// Block until the rate limiter allows sending the next request
-	err := limiter.Wait(context.Background())
+	err := limiter.Wait(ctx)
 	if err != nil {
 		s.logger.Error("Rate limiter wait interrupted", zap.Error(err))
 		return
 	}
 
 	reqCtx, reqCancel := context.WithTimeout(ctx, timeout)
-
-	_, err = s.sensorClient.SendSensorValues(reqCtx,
-		mapper.ToProtoRequest(sensorValues),
-	)
-	if err != nil {
-		statusCode := status.Convert(err)
-		s.logger.Debug("SensorServiceClient.SendSensorValues failed",
-			zap.Uint32("status_code", uint32(statusCode.Code())),
-			zap.String("message", statusCode.Message()),
+	func() {
+		defer reqCancel()
+		_, err = s.sensorClient.SendSensorValues(reqCtx,
+			mapper.ToProtoRequest(sensorValues),
 		)
-	}
-	reqCancel()
+		if err != nil {
+			statusCode := status.Convert(err)
+			s.logger.Debug("SensorServiceClient.SendSensorValues failed",
+				zap.Uint32("status_code", uint32(statusCode.Code())),
+				zap.String("message", statusCode.Message()),
+			)
+		}
+	}()
 }
 
 // Run starts send requests using corresponding client in a separate goroutine.
 // It will start graceful shutdown when the parent context is done (via <-ctx.Done()).
-func (s *SensorService) Run(
-	parentCtx context.Context,
-	config *RunConfig,
-) {
+func (s *SensorService) Run(parentCtx context.Context, config *RunConfig) {
 	wg := config.wg
 	if wg != nil {
 		wg.Add(1)
@@ -81,52 +84,58 @@ func (s *SensorService) Run(
 		for {
 			select {
 			case <-parentCtx.Done():
-				// minimal timeout context supports
-				if config.gracefulShutdown < gracefulShutdownMinDuration {
+				if s.gracefulShutdown < gracefulShutdownMinDuration {
 					return
 				}
-				s.logger.Debug("SensorService.Run has started gracefulShutdown")
-				s.gracefulShutdown(config)
+				s.shutdown(config)
 				return
 			case sensorValues, ok := <-config.valuesChan:
 				if !ok {
 					return
 				}
-				s.sendRequest(
-					parentCtx,
-					sensorValues,
-					config.limiter,
-					config.totalTimeoutRPC,
-				)
+				s.sendRequest(parentCtx, sensorValues, config.limiter, config.totalTimeoutRPC)
 			}
 		}
 	}()
 }
 
-func (s *SensorService) gracefulShutdown(config *RunConfig) {
+func (s *SensorService) shutdown(config *RunConfig) {
+	if config == nil {
+		return
+	}
+
 	var once sync.Once
 	once.Do(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), config.gracefulShutdown)
+		s.logger.Debug("SensorService has started shutdown")
+
+		ctx, cancel := context.WithTimeout(context.Background(), s.gracefulShutdown)
 		defer cancel()
 
-		for {
-			select {
-			case <-ctx.Done():
-				s.logger.Debug("Graceful shutdown context expired")
-				return
-			case sensorValues, ok := <-config.valuesChan:
-				if !ok {
-					return
-				}
-				reqCtx, reqCancel := context.WithTimeout(ctx, config.totalTimeoutRPC)
-				s.sendRequest(
-					reqCtx,
-					sensorValues,
-					config.limiter,
-					config.totalTimeoutRPC,
-				)
-				reqCancel()
-			}
+		valuesBatch := drainChannel(ctx, config.valuesChan)
+		if len(valuesBatch) == 0 {
+			return
 		}
+
+		reqCtx, reqCancel := context.WithTimeout(context.Background(), config.totalTimeoutRPC)
+		s.sendRequest(reqCtx, valuesBatch, config.limiter, config.totalTimeoutRPC)
+		reqCancel()
 	})
+}
+
+func drainChannel(ctx context.Context, valuesChan <-chan []measurement.SensorValue) []measurement.SensorValue {
+	var valuesBatch []measurement.SensorValue
+
+	for {
+		select {
+		case <-ctx.Done():
+			return valuesBatch
+		case sensorValues, ok := <-valuesChan:
+			if !ok {
+				return valuesBatch
+			}
+			valuesBatch = append(valuesBatch, sensorValues...)
+		default:
+			return valuesBatch
+		}
+	}
 }

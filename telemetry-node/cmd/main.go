@@ -16,6 +16,7 @@ import (
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/rate"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/sensor/simulator"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/service"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/strategy/channel/receive"
 	rps "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/utils/rate"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/utils/timeout"
 	"go.uber.org/zap"
@@ -103,7 +104,13 @@ func main() {
 	limiter := ratelimiter.NewLimiter(ratelimiter.Limit(actualRPS), actualRPS)
 
 	sensorClient := sensorapi.NewSensorServiceClient(clientConn)
-	sensorService, err := service.NewSensorService(sensorClient, limiter, defaultShutdown, lg)
+	sensorService, err := service.NewSensorService(
+		sensorClient,
+		limiter,
+		&receive.DrainLastStrategy{},
+		defaultShutdown,
+		lg,
+	)
 	if err != nil {
 		lg.Fatal("failed to initialize sensor service", zap.Error(err))
 	}

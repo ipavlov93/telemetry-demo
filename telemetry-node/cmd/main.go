@@ -30,9 +30,8 @@ const (
 	defaultMinLogLevel          = zapcore.InfoLevel
 	defaultRequestRatePerSecond = 1
 
-	perRetryTimeout = 100 * time.Millisecond
-
-	gracefulShutdown = time.Second
+	defaultPerRetryTimeout = 100 * time.Millisecond
+	defaultShutdown        = 5 * time.Second
 )
 
 func main() {
@@ -72,8 +71,8 @@ func main() {
 	}
 
 	// Important:
-	// if totalTimeoutRPC <= perRetryTimeout then retryStrategy will never run
-	totalTimeoutRPC := timeout.TotalTimeout(perRetryTimeout, appConfig.GrpcClientMaxRetryAttempts)
+	// if totalTimeoutRPC <= defaultPerRetryTimeout then retryStrategy will never run
+	totalTimeoutRPC := timeout.TotalTimeout(defaultPerRetryTimeout, appConfig.GrpcClientMaxRetryAttempts)
 
 	grpcClientOptions := []grpc.DialOption{
 		// Important: insecure is allowed to use only for local development
@@ -83,7 +82,7 @@ func main() {
 				retry.WithCodes(codes.Unavailable, codes.ResourceExhausted),
 				// WithMax supplies given value minus one (first initial attempt)
 				retry.WithMax(appConfig.GrpcClientMaxRetryAttempts+1),
-				retry.WithPerRetryTimeout(perRetryTimeout),
+				retry.WithPerRetryTimeout(defaultPerRetryTimeout),
 				retry.WithOnRetryCallback(func(ctx context.Context, attempt uint, err error) {
 					lg.Debug("", zap.Uint("retry_attempt", attempt), zap.Error(err))
 				}),
@@ -96,9 +95,6 @@ func main() {
 	}
 	defer clientConn.Close()
 
-	sensorClient := sensorapi.NewSensorServiceClient(clientConn)
-	sensorService := service.NewSensorService(sensorClient, gracefulShutdown, lg)
-
 	// rps replaced with actualRPS to make rate = burst.
 	actualRPS := rps.RoundOrDefaultRPS(
 		float64(appConfig.RequestRatePerSecond),
@@ -106,10 +102,16 @@ func main() {
 	)
 	limiter := ratelimiter.NewLimiter(ratelimiter.Limit(actualRPS), actualRPS)
 
+	sensorClient := sensorapi.NewSensorServiceClient(clientConn)
+	sensorService, err := service.NewSensorService(sensorClient, limiter, defaultShutdown, lg)
+	if err != nil {
+		lg.Fatal("failed to initialize sensor service", zap.Error(err))
+	}
+
 	lg.Info("Client configured to send requests to server socket",
 		zap.String("socket", appConfig.GrpcServerSocket),
 		zap.Uint("max_attempts", appConfig.GrpcClientMaxRetryAttempts),
-		zap.Duration("per_retry_timeout_second", perRetryTimeout),
+		zap.Duration("per_retry_timeout_second", defaultPerRetryTimeout),
 	)
 	lg.Info("Client configured to send requests with RPS",
 		zap.Float64("limit", float64(limiter.Limit())),
@@ -127,13 +129,16 @@ func main() {
 		lg.Fatal("failed to run SensorSimulator", zap.Error(err))
 	}
 
-	serviceRunConfig := service.NewRunConfig(valuesChan, totalTimeoutRPC, limiter, &wg)
+	serviceRunConfig := service.NewRunConfig(valuesChan, totalTimeoutRPC, &wg)
 	if !serviceRunConfig.Valid() {
 		lg.Fatal("invalid sensorService.Run configuration")
 	}
 
 	// Run send worker
-	sensorService.Run(ctx, serviceRunConfig)
+	err = sensorService.Run(ctx, serviceRunConfig)
+	if err != nil {
+		lg.Fatal("failed to Run SensorService", zap.Error(err))
+	}
 
 	select {
 	case <-ctx.Done():

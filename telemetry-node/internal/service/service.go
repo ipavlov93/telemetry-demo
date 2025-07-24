@@ -19,6 +19,7 @@ const gracefulShutdownMinDuration = 100 * time.Millisecond
 // SensorService represents component that is responsible for delivery to destination server.
 type SensorService struct {
 	sensorClient     sensorapi.SensorServiceClient
+	limiter          RateLimiter
 	gracefulShutdown time.Duration
 	logger           logger.Logger
 }
@@ -26,6 +27,7 @@ type SensorService struct {
 // NewSensorService constructor returns error if gracefulShutdown is invalid.
 func NewSensorService(
 	sensorClient sensorapi.SensorServiceClient,
+	limiter RateLimiter,
 	gracefulShutdown time.Duration,
 	lg logger.Logger,
 ) (*SensorService, error) {
@@ -34,6 +36,7 @@ func NewSensorService(
 	}
 	return &SensorService{
 		sensorClient:     sensorClient,
+		limiter:          limiter,
 		gracefulShutdown: gracefulShutdown,
 		logger:           lg,
 	}, nil
@@ -44,11 +47,10 @@ func NewSensorService(
 func (s *SensorService) sendRequest(
 	ctx context.Context,
 	sensorValues []measurement.SensorValue,
-	limiter RateLimiter,
 	timeout time.Duration,
 ) {
 	// Block until the rate limiter allows sending the next request
-	err := limiter.Wait(ctx)
+	err := s.limiter.Wait(ctx)
 	if err != nil {
 		s.logger.Error("Rate limiter wait interrupted", zap.Error(err))
 		return
@@ -99,7 +101,7 @@ func (s *SensorService) Run(parentCtx context.Context, config *RunConfig) {
 				if !ok {
 					return
 				}
-				s.sendRequest(parentCtx, sensorValues, config.limiter, config.totalTimeoutRPC)
+				s.sendRequest(parentCtx, sensorValues, config.totalTimeoutRPC)
 			}
 		}
 	}()
@@ -123,7 +125,7 @@ func (s *SensorService) shutdown(config *RunConfig) {
 		}
 
 		reqCtx, reqCancel := context.WithTimeout(ctx, config.totalTimeoutRPC)
-		s.sendRequest(reqCtx, valuesBatch, config.limiter, config.totalTimeoutRPC)
+		s.sendRequest(reqCtx, valuesBatch, config.totalTimeoutRPC)
 		reqCancel()
 	})
 }

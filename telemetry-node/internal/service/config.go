@@ -15,20 +15,17 @@ type RateLimiter interface {
 type RunConfig struct {
 	valuesChan      <-chan []measurement.SensorValue
 	totalTimeoutRPC time.Duration
-	limiter         RateLimiter
 	wg              *sync.WaitGroup
 }
 
 func NewRunConfig(
 	ch <-chan []measurement.SensorValue,
 	totalTimeoutRPC time.Duration,
-	limiter RateLimiter,
 	wg *sync.WaitGroup,
 ) *RunConfig {
 	return &RunConfig{
 		valuesChan:      ch,
 		totalTimeoutRPC: totalTimeoutRPC,
-		limiter:         limiter,
 		wg:              wg,
 	}
 }

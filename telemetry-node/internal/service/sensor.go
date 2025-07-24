@@ -124,11 +124,18 @@ func (s *SensorService) shutdown(config *RunConfig) {
 		ctx, cancel := context.WithTimeout(context.Background(), s.gracefulShutdown)
 		defer cancel()
 
-		valuesBatch := s.drainStrategy.Receive(ctx, config.valuesChan)
-		if len(valuesBatch) == 0 {
-			return
-		}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				valuesBatch := s.drainStrategy.Receive(ctx, config.valuesChan)
+				if len(valuesBatch) == 0 {
+					return
+				}
 
-		s.sendRequest(ctx, valuesBatch, config.totalTimeoutRPC)
+				s.sendRequest(ctx, valuesBatch, config.totalTimeoutRPC)
+			}
+		}
 	})
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const gracefulShutdownMinDuration = 50 * time.Millisecond
+const gracefulShutdownMinDuration = 100 * time.Millisecond
 
 // SensorService represents component that is responsible for delivery to destination server.
 type SensorService struct {
@@ -22,16 +23,20 @@ type SensorService struct {
 	logger           logger.Logger
 }
 
+// NewSensorService constructor returns error if gracefulShutdown is invalid.
 func NewSensorService(
 	sensorClient sensorapi.SensorServiceClient,
 	gracefulShutdown time.Duration,
 	lg logger.Logger,
-) *SensorService {
+) (*SensorService, error) {
+	if gracefulShutdown < gracefulShutdownMinDuration {
+		return nil, fmt.Errorf("graceful shutdown must be at least %v", gracefulShutdownMinDuration)
+	}
 	return &SensorService{
 		sensorClient:     sensorClient,
 		gracefulShutdown: gracefulShutdown,
 		logger:           lg,
-	}
+	}, nil
 }
 
 // sendRequest sends request using corresponding client and ignores errors.
@@ -66,7 +71,9 @@ func (s *SensorService) sendRequest(
 }
 
 // Run starts send requests using corresponding client in a separate goroutine.
-// It will start graceful shutdown when the parent context is done (via <-ctx.Done()).
+// It will start graceful shutdown:
+// - when parent context is done (via <-ctx.Done())
+// - if gracefulShutdown is bigger than config.totalTimeoutRPC.
 func (s *SensorService) Run(parentCtx context.Context, config *RunConfig) {
 	wg := config.wg
 	if wg != nil {
@@ -84,10 +91,9 @@ func (s *SensorService) Run(parentCtx context.Context, config *RunConfig) {
 		for {
 			select {
 			case <-parentCtx.Done():
-				if s.gracefulShutdown < gracefulShutdownMinDuration {
-					return
+				if config.totalTimeoutRPC <= s.gracefulShutdown {
+					s.shutdown(config)
 				}
-				s.shutdown(config)
 				return
 			case sensorValues, ok := <-config.valuesChan:
 				if !ok {
@@ -116,7 +122,7 @@ func (s *SensorService) shutdown(config *RunConfig) {
 			return
 		}
 
-		reqCtx, reqCancel := context.WithTimeout(context.Background(), config.totalTimeoutRPC)
+		reqCtx, reqCancel := context.WithTimeout(ctx, config.totalTimeoutRPC)
 		s.sendRequest(reqCtx, valuesBatch, config.limiter, config.totalTimeoutRPC)
 		reqCancel()
 	})

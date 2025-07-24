@@ -97,7 +97,7 @@ func main() {
 	defer clientConn.Close()
 
 	sensorClient := sensorapi.NewSensorServiceClient(clientConn)
-	sensorService := service.NewSensorService(sensorClient, lg)
+	sensorService := service.NewSensorService(sensorClient, gracefulShutdown, lg)
 
 	// rps replaced with actualRPS to make rate = burst.
 	actualRPS := rps.RoundOrDefaultRPS(
@@ -127,13 +127,7 @@ func main() {
 		lg.Fatal("failed to run SensorSimulator", zap.Error(err))
 	}
 
-	serviceRunConfig := service.NewRunConfig(
-		valuesChan,
-		totalTimeoutRPC,
-		limiter,
-		gracefulShutdown,
-		&wg,
-	)
+	serviceRunConfig := service.NewRunConfig(valuesChan, totalTimeoutRPC, limiter, &wg)
 	if !serviceRunConfig.Valid() {
 		lg.Fatal("invalid sensorService.Run configuration")
 	}

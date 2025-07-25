@@ -72,7 +72,7 @@ func main() {
 	}
 
 	// Important:
-	// if totalTimeoutRPC <= defaultPerRetryTimeout then retryStrategy will never run
+	// if totalTimeoutRPC <= perRetryTimeout then retryStrategy will never run
 	totalTimeoutRPC := timeout.TotalTimeout(defaultPerRetryTimeout, appConfig.GrpcClientMaxRetryAttempts)
 
 	grpcClientOptions := []grpc.DialOption{

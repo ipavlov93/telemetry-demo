@@ -16,6 +16,7 @@ import (
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/rate"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/sensor/simulator"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/service"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/strategy/channel/receive"
 	rps "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/utils/rate"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/utils/timeout"
 	"go.uber.org/zap"
@@ -30,7 +31,8 @@ const (
 	defaultMinLogLevel          = zapcore.InfoLevel
 	defaultRequestRatePerSecond = 1
 
-	perRetryTimeout = 100 * time.Millisecond
+	defaultPerRetryTimeout = 100 * time.Millisecond
+	defaultShutdown        = 5 * time.Second
 )
 
 func main() {
@@ -56,7 +58,7 @@ func main() {
 		lg.Fatal("failed to initialize sampling rate", zap.Error(err))
 	}
 
-	intervalSensor, err := simulator.NewWithRate(
+	sensorSimulator, err := simulator.NewWithRate(
 		func() int64 {
 			return rand.Int64N(int64(2 << 16))
 		},
@@ -70,8 +72,8 @@ func main() {
 	}
 
 	// Important:
-	// if totalTimeoutPerRPCall <= perRetryTimeout then retryStrategy will never run
-	totalTimeoutPerRPCall := timeout.TotalTimeout(perRetryTimeout, appConfig.GrpcClientMaxRetryAttempts)
+	// if totalTimeoutRPC <= defaultPerRetryTimeout then retryStrategy will never run
+	totalTimeoutRPC := timeout.TotalTimeout(defaultPerRetryTimeout, appConfig.GrpcClientMaxRetryAttempts)
 
 	grpcClientOptions := []grpc.DialOption{
 		// Important: insecure is allowed to use only for local development
@@ -81,7 +83,7 @@ func main() {
 				retry.WithCodes(codes.Unavailable, codes.ResourceExhausted),
 				// WithMax supplies given value minus one (first initial attempt)
 				retry.WithMax(appConfig.GrpcClientMaxRetryAttempts+1),
-				retry.WithPerRetryTimeout(perRetryTimeout),
+				retry.WithPerRetryTimeout(defaultPerRetryTimeout),
 				retry.WithOnRetryCallback(func(ctx context.Context, attempt uint, err error) {
 					lg.Debug("", zap.Uint("retry_attempt", attempt), zap.Error(err))
 				}),
@@ -94,9 +96,6 @@ func main() {
 	}
 	defer clientConn.Close()
 
-	sensorClient := sensorapi.NewSensorServiceClient(clientConn)
-	sensorService := service.NewSensorService(sensorClient, lg)
-
 	// rps replaced with actualRPS to make rate = burst.
 	actualRPS := rps.RoundOrDefaultRPS(
 		float64(appConfig.RequestRatePerSecond),
@@ -104,10 +103,22 @@ func main() {
 	)
 	limiter := ratelimiter.NewLimiter(ratelimiter.Limit(actualRPS), actualRPS)
 
+	sensorClient := sensorapi.NewSensorServiceClient(clientConn)
+	sensorService, err := service.NewSensorService(
+		sensorClient,
+		limiter,
+		&receive.DrainLastStrategy{},
+		defaultShutdown,
+		lg,
+	)
+	if err != nil {
+		lg.Fatal("failed to initialize sensor service", zap.Error(err))
+	}
+
 	lg.Info("Client configured to send requests to server socket",
 		zap.String("socket", appConfig.GrpcServerSocket),
 		zap.Uint("max_attempts", appConfig.GrpcClientMaxRetryAttempts),
-		zap.Duration("per_retry_timeout_second", perRetryTimeout),
+		zap.Duration("per_retry_timeout_second", defaultPerRetryTimeout),
 	)
 	lg.Info("Client configured to send requests with RPS",
 		zap.Float64("limit", float64(limiter.Limit())),
@@ -119,33 +130,22 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	// Run intervalSensor worker
-	valuesChan, err := intervalSensor.Run(ctx, &wg)
+	// Run sensorSimulator worker
+	valuesChan, err := sensorSimulator.Run(ctx, &wg)
 	if err != nil {
 		lg.Fatal("failed to run SensorSimulator", zap.Error(err))
 	}
 
-	// Run send worker
-	go func(rpcCallTimeout time.Duration, wg *sync.WaitGroup) {
-		defer wg.Done()
+	serviceRunConfig := service.NewRunConfig(valuesChan, totalTimeoutRPC, &wg)
+	if !serviceRunConfig.Valid() {
+		lg.Fatal("invalid sensorService.Run configuration")
+	}
 
-		for {
-			select {
-			case <-ctx.Done():
-				lg.Debug("send worker received context done, returning")
-				return
-			default:
-				// Block until the rate limiter allows sending the next request
-				err = limiter.Wait(context.Background())
-				if err != nil {
-					lg.Error("Rate limiter wait interrupted", zap.Error(err))
-					return
-				}
-				sensorService.SendSensorValues(ctx, rpcCallTimeout, valuesChan)
-			}
-		}
-	}(totalTimeoutPerRPCall, &wg)
-	wg.Add(1)
+	// Run send worker
+	err = sensorService.Run(ctx, serviceRunConfig)
+	if err != nil {
+		lg.Fatal("failed to Run SensorService", zap.Error(err))
+	}
 
 	select {
 	case <-ctx.Done():

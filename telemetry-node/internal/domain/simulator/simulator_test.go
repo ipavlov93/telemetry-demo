@@ -9,7 +9,7 @@ import (
 
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/measurement"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/rate"
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/sensor/simulator"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/simulator"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )

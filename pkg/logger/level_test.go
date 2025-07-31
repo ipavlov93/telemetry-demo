@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func TestParseLevel(t *testing.T) {
+func TestParseLevelOrDefault(t *testing.T) {
 	tests := []struct {
 		name       string
 		givenLevel string
@@ -59,8 +59,85 @@ func TestParseLevel(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ParseLevel(tt.givenLevel, tt.fallback)
+			got := ParseLevelOrDefault(tt.givenLevel, tt.fallback)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestParseLevel(t *testing.T) {
+	tests := []struct {
+		name       string
+		givenLevel string
+		want       zapcore.Level
+		wantErr    bool
+	}{
+		{
+			name:       "should return error",
+			givenLevel: "",
+			want:       0,
+			wantErr:    true,
+		},
+		{
+			name:       "should return error",
+			givenLevel: "123456",
+			want:       0,
+			wantErr:    true,
+		},
+		{
+			name:       "should return error",
+			givenLevel: "-123456",
+			want:       0,
+			wantErr:    true,
+		},
+		{
+			name:       "should return error",
+			givenLevel: "not_supported_level",
+			want:       0,
+			wantErr:    true,
+		},
+		{
+			name:       "should set given level",
+			givenLevel: "debug",
+			want:       zapcore.DebugLevel,
+			wantErr:    false,
+		},
+		{
+			name:       "should set given level",
+			givenLevel: "info",
+			want:       zapcore.InfoLevel,
+			wantErr:    false,
+		},
+		{
+			name:       "should set given level",
+			givenLevel: "DEBUG",
+			want:       zapcore.DebugLevel,
+			wantErr:    false,
+		},
+		{
+			name:       "should set given level",
+			givenLevel: "warn",
+			want:       zapcore.WarnLevel,
+			wantErr:    false,
+		},
+		{
+			name:       "should set given level",
+			givenLevel: "error",
+			want:       zapcore.ErrorLevel,
+			wantErr:    false,
+		},
+		{
+			name:       "should set given level",
+			givenLevel: "fatal",
+			want:       zapcore.FatalLevel,
+			wantErr:    false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseLevel(tt.givenLevel)
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.wantErr, err != nil)
 		})
 	}
 }

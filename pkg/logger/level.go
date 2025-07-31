@@ -1,16 +1,27 @@
 package logger
 
-import "go.uber.org/zap/zapcore"
+import (
+	"fmt"
 
-// ParseLevel parses given level or set default level.
-func ParseLevel(level string, fallback zapcore.Level) zapcore.Level {
-	if level == "" {
+	"go.uber.org/zap/zapcore"
+)
+
+// ParseLevelOrDefault parses given level or set default level.
+func ParseLevelOrDefault(level string, fallback zapcore.Level) zapcore.Level {
+	logLevel, err := ParseLevel(level)
+	if err != nil {
 		return fallback
+	}
+	return logLevel
+}
+
+func ParseLevel(level string) (zapcore.Level, error) {
+	if level == "" {
+		return 0, fmt.Errorf("empty log level")
 	}
 	logLevel, err := zapcore.ParseLevel(level)
 	if err != nil {
-		// set default log level
-		logLevel = fallback
+		return 0, err
 	}
-	return logLevel
+	return logLevel, nil
 }

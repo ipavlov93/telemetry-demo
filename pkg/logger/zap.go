@@ -1,8 +1,6 @@
 package logger
 
 import (
-	"io"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -22,27 +20,14 @@ func (z *ZapLogger) Error(msg string, fields ...zap.Field) { z.logger.Error(msg,
 func (z *ZapLogger) Fatal(msg string, fields ...zap.Field) { z.logger.Fatal(msg, fields...) }
 
 func NewWithCore(core zapcore.Core, options ...zap.Option) *ZapLogger {
+	options = append([]zap.Option{
+		zap.AddCaller(),
+		zap.AddCallerSkip(1),
+	}, options...)
+
 	return &ZapLogger{
-		logger: zap.New(core, options...).
-			WithOptions(zap.AddCallerSkip(1)),
+		logger: zap.New(core, options...),
 	}
-}
-
-// New logger uses JSON encoding with RFC3339 timestamps.
-func New(w io.Writer, minLogLevel zapcore.Level) *ZapLogger {
-	cfg := zap.NewProductionEncoderConfig()
-	cfg.EncodeTime = zapcore.RFC3339TimeEncoder
-
-	core := zapcore.NewCore(
-		zapcore.NewJSONEncoder(cfg),
-		zapcore.AddSync(w),
-		minLogLevel,
-	)
-
-	logger := zap.New(core, zap.AddCaller()).
-		WithOptions(zap.AddCallerSkip(1))
-
-	return &ZapLogger{logger: logger}
 }
 
 // NewNopLogger never writes out logs or internal errors.

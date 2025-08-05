@@ -11,16 +11,16 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	sensorapi "github.com/ipavlov93/telemetry-demo/pkg/grpc/generated/v1/sensor_service"
-	"github.com/ipavlov93/telemetry-demo/pkg/logger"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/rate"
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/sensor/simulator"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/simulator"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/infra/logger/factory/writer"
+	zapfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/infra/logger/factory/zap"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/service"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/strategy/channel/receive"
 	rps "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/utils/rate"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/utils/timeout"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	ratelimiter "golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -28,7 +28,6 @@ import (
 )
 
 const (
-	defaultMinLogLevel          = zapcore.InfoLevel
 	defaultRequestRatePerSecond = 1
 
 	defaultPerRetryTimeout = 100 * time.Millisecond
@@ -36,7 +35,7 @@ const (
 )
 
 func main() {
-	appConfig := config.LoadConfigEnv()
+	appConfig := config.NewAppConfig()
 
 	// Create a context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -45,12 +44,15 @@ func main() {
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
-	lg := logger.New(os.Stdout,
-		logger.ParseLevel(
-			appConfig.LoggerMinLogLevel,
-			defaultMinLogLevel,
-		),
+	lg, err := zapfactory.NewLogger(
+		appConfig.AppLoggerConfig,
+		writer.NewLogWriter,
+		zapfactory.NewEncoder(),
 	)
+	if err != nil {
+		lg = zap.NewNop()
+	}
+
 	defer lg.Sync()
 
 	samplingRate, err := rate.New(appConfig.SensorValueRatePerSecond, time.Second)

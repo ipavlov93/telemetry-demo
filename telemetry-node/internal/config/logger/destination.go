@@ -2,7 +2,8 @@ package logger
 
 import "fmt"
 
-// logOutput enforces safe construction via NewLogOutput().
+// logOutput supports stdout, file, etc.
+// It enforces safe construction via NewLogOutput().
 type logOutput string
 
 const (

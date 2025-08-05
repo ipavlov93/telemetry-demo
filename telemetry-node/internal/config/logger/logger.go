@@ -1,14 +1,24 @@
 package logger
 
-type Config struct {
-	LogDestinations []LogOutput
+type ConfigMap map[string]Configuration // map[name]Configuration
+
+func NewNopConfigMap(key string) ConfigMap {
+	return map[string]Configuration{
+		key: NewNopConfiguration(),
+	}
 }
 
-// LogOutput is a single logging output config, e.g. stdout, file, or connection.
-type LogOutput struct {
-	Enabled  bool
-	MinLevel string
-	Type     logOutput
+// Configuration is a single logger config
+type Configuration struct {
+	Enabled     bool
+	MinLevel    string
+	Destination logOutput
 
 	File *FileLoggerConfig `json:"file,omitempty"`
+}
+
+func NewNopConfiguration() Configuration {
+	return Configuration{
+		Enabled: false,
+	}
 }

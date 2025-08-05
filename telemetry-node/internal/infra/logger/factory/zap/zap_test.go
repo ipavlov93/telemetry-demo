@@ -18,23 +18,21 @@ func TestNewLogger_WithZapTee(t *testing.T) {
 	buff1 := &bytes.Buffer{}
 	buff2 := &bytes.Buffer{}
 
-	cfg := logger.Config{
-		LogDestinations: []logger.LogOutput{
-			{
-				Enabled:  true,
-				MinLevel: "debug",
-				Type:     "buffer1",
-			},
-			{
-				Enabled:  true,
-				MinLevel: "error",
-				Type:     "buffer2",
-			},
+	cfg := logger.ConfigMap{
+		"log_destination_1": {
+			Enabled:     true,
+			MinLevel:    "debug",
+			Destination: "buffer1",
+		},
+		"log_destination_2": {
+			Enabled:     true,
+			MinLevel:    "error",
+			Destination: "buffer2",
 		},
 	}
 
-	factory := func(out logger.LogOutput) (io.Writer, error) {
-		switch out.Type {
+	factory := func(out logger.Configuration) (io.Writer, error) {
+		switch out.Destination {
 		case "buffer1":
 			return zapcore.AddSync(buff1), nil
 		case "buffer2":

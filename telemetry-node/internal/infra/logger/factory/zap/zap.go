@@ -13,21 +13,22 @@ const defaultMinLogLevel = zapcore.InfoLevel
 
 // NewLogger factory constructs logger with multiple log destinations with corresponding log level.
 func NewLogger(
-	cfg config.Config,
+	configMap config.ConfigMap,
 	writerFactory writer.Factory,
 	encoder zapcore.Encoder,
 	option ...zap.Option,
 ) (*zap.Logger, error) {
 	var cores []zapcore.Core
 
-	for _, logCfg := range cfg.LogDestinations {
+	for _, logCfg := range configMap {
 		if !logCfg.Enabled {
 			continue
 		}
 
 		w, err := writerFactory(logCfg)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create writer for type %q: %v", logCfg.Type, err)
+			return nil, fmt.Errorf(
+				"failed to create writer for given destination %q: %v", logCfg.Destination, err)
 		}
 
 		cores = append(cores, newCore(logCfg.MinLevel, defaultMinLogLevel, encoder, w))

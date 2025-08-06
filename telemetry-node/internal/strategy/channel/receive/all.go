@@ -17,11 +17,11 @@ func (d *DrainAllStrategy) Receive(ctx context.Context, valuesChan <-chan []meas
 			return valuesBatch
 		case sensorValues, ok := <-valuesChan:
 			if !ok {
-				return valuesBatch
+				return nil
 			}
 			valuesBatch = append(valuesBatch, sensorValues...)
 		default:
-			return valuesBatch
+			return nil
 		}
 	}
 }

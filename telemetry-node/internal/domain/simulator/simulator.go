@@ -73,9 +73,9 @@ func New(
 	// optional parameters
 	actualSize := bufferSize
 	if bufferSize <= 0 {
-		bufferSize = defaultBufferSize
+		actualSize = defaultBufferSize
 	}
-	actualChannelCap := defaultChannelCapacity
+	actualChannelCap := channelCap
 	if channelCap < 0 {
 		actualChannelCap = defaultChannelCapacity
 	}

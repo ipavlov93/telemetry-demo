@@ -15,6 +15,20 @@ func EnvironmentVariable(key string, fallback string) string {
 	return fallback
 }
 
+// ParseBoolEnv lookups and parse env variable by given key.
+// Otherwise, returns fallback.
+func ParseBoolEnv(key string, fallback bool) bool {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+	parsedValue, err := strconv.ParseBool(value)
+	if err != nil {
+		return fallback
+	}
+	return parsedValue
+}
+
 // ParseIntEnv lookups and parse env variable by given key.
 // Otherwise, returns fallback.
 func ParseIntEnv(key string, fallback int) int {

@@ -2,41 +2,24 @@ package main
 
 import (
 	"context"
-	"math/rand/v2"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
-	sensorapi "github.com/ipavlov93/telemetry-demo/pkg/grpc/generated/v1/sensor_service"
-	"github.com/ipavlov93/telemetry-demo/pkg/logger"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config"
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/rate"
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/sensor/simulator"
+	simulatorfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/simulator/factory"
+	retryfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/infra/grpc/factory/retry"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/infra/logger/factory/writer"
+	zapfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/infra/logger/factory/zap"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/service"
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/strategy/channel/receive"
-	rps "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/utils/rate"
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/utils/timeout"
+	servicefactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/service/factory"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	ratelimiter "golang.org/x/time/rate"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
-)
-
-const (
-	defaultMinLogLevel          = zapcore.InfoLevel
-	defaultRequestRatePerSecond = 1
-
-	defaultPerRetryTimeout = 100 * time.Millisecond
-	defaultShutdown        = 5 * time.Second
 )
 
 func main() {
-	appConfig := config.LoadConfigEnv()
+	appConfig := config.NewAppConfig()
 
 	// Create a context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -45,50 +28,33 @@ func main() {
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
-	lg := logger.New(os.Stdout,
-		logger.ParseLevel(
-			appConfig.LoggerMinLogLevel,
-			defaultMinLogLevel,
-		),
+	lg, err := zapfactory.NewLogger(
+		appConfig.AppLoggerConfig,
+		writer.NewLogWriter,
+		zapfactory.NewEncoder(),
 	)
-	defer lg.Sync()
-
-	samplingRate, err := rate.New(appConfig.SensorValueRatePerSecond, time.Second)
 	if err != nil {
-		lg.Fatal("failed to initialize sampling rate", zap.Error(err))
+		lg = zap.NewNop()
 	}
 
-	sensorSimulator, err := simulator.NewWithRate(
-		func() int64 {
-			return rand.Int64N(int64(2 << 16))
-		},
-		samplingRate,
+	defer lg.Sync()
+
+	sensorSimulator, err := simulatorfactory.NewRandomValueSimulator(
 		appConfig.SensorName,
-		0,
+		appConfig.SensorValueRatePerSecond,
 		lg,
 	)
 	if err != nil {
 		lg.Fatal("failed to initialize SensorSimulator", zap.Error(err))
 	}
 
-	// Important:
-	// if totalTimeoutRPC <= perRetryTimeout then retryStrategy will never run
-	totalTimeoutRPC := timeout.TotalTimeout(defaultPerRetryTimeout, appConfig.GrpcClientMaxRetryAttempts)
-
-	grpcClientOptions := []grpc.DialOption{
-		// Important: insecure is allowed to use only for local development
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(
-			retry.UnaryClientInterceptor(
-				retry.WithCodes(codes.Unavailable, codes.ResourceExhausted),
-				// WithMax supplies given value minus one (first initial attempt)
-				retry.WithMax(appConfig.GrpcClientMaxRetryAttempts+1),
-				retry.WithPerRetryTimeout(defaultPerRetryTimeout),
-				retry.WithOnRetryCallback(func(ctx context.Context, attempt uint, err error) {
-					lg.Debug("", zap.Uint("retry_attempt", attempt), zap.Error(err))
-				}),
-			)),
-	}
+	// Important: insecure is allowed to use only for local development
+	grpcClientOptions := retryfactory.NewInsecure(
+		retryfactory.NewRetryUnaryInterceptor(
+			appConfig.GrpcClientMaxRetryAttempts,
+			lg,
+		)...,
+	)
 
 	clientConn, err := grpc.NewClient(appConfig.GrpcServerSocket, grpcClientOptions...)
 	if err != nil {
@@ -96,19 +62,9 @@ func main() {
 	}
 	defer clientConn.Close()
 
-	// rps replaced with actualRPS to make rate = burst.
-	actualRPS := rps.RoundOrDefaultRPS(
-		float64(appConfig.RequestRatePerSecond),
-		defaultRequestRatePerSecond,
-	)
-	limiter := ratelimiter.NewLimiter(ratelimiter.Limit(actualRPS), actualRPS)
-
-	sensorClient := sensorapi.NewSensorServiceClient(clientConn)
-	sensorService, err := service.NewSensorService(
-		sensorClient,
-		limiter,
-		&receive.DrainLastStrategy{},
-		defaultShutdown,
+	sensorService, err := servicefactory.NewSensorServiceRPS(
+		appConfig.RequestRatePerSecond,
+		clientConn,
 		lg,
 	)
 	if err != nil {
@@ -118,11 +74,6 @@ func main() {
 	lg.Info("Client configured to send requests to server socket",
 		zap.String("socket", appConfig.GrpcServerSocket),
 		zap.Uint("max_attempts", appConfig.GrpcClientMaxRetryAttempts),
-		zap.Duration("per_retry_timeout_second", defaultPerRetryTimeout),
-	)
-	lg.Info("Client configured to send requests with RPS",
-		zap.Float64("limit", float64(limiter.Limit())),
-		zap.Int("burst", limiter.Burst()),
 	)
 	lg.Info("Sensor configured to produce values with RPS",
 		zap.Float32("rate", appConfig.SensorValueRatePerSecond),
@@ -136,12 +87,14 @@ func main() {
 		lg.Fatal("failed to run SensorSimulator", zap.Error(err))
 	}
 
+	// Important: if totalTimeoutRPC <= perRetryTimeout then retryStrategy will never run
+	totalTimeoutRPC := retryfactory.NewTotalTimeout(appConfig.GrpcClientMaxRetryAttempts)
 	serviceRunConfig := service.NewRunConfig(valuesChan, totalTimeoutRPC, &wg)
 	if !serviceRunConfig.Valid() {
-		lg.Fatal("invalid sensorService.Run configuration")
+		lg.Fatal("invalid configuration for sensorService.Run")
 	}
 
-	// Run send worker
+	// Run sensor service worker
 	err = sensorService.Run(ctx, serviceRunConfig)
 	if err != nil {
 		lg.Fatal("failed to Run SensorService", zap.Error(err))
@@ -149,13 +102,10 @@ func main() {
 
 	select {
 	case <-ctx.Done():
-		lg.Debug("Parent context is done")
 	case <-signalCh:
 		lg.Info("Main routine received signal. Starting graceful shutdown")
 		cancel() // cancel the context to signal other goroutines to stop
 	}
 
 	wg.Wait()
-
-	lg.Debug("Main routine returned")
 }

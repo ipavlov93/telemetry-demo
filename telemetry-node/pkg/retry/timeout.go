@@ -8,7 +8,7 @@ import (
 
 const perRetryTimeout = 100 * time.Millisecond
 
-// NewTotalTimeout duration for API call including retries and initial attempt.
+// NewTotalTimeout duration for gRPC call including retries and initial attempt.
 func NewTotalTimeout(maxRetryAttempts uint) time.Duration {
 	totalAttempts := 1 + maxRetryAttempts
 	totalTimeout := timeout.TotalTimeout(perRetryTimeout, totalAttempts)

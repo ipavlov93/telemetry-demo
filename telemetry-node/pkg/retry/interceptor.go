@@ -17,10 +17,8 @@ func NewInsecure(options ...grpc.DialOption) []grpc.DialOption {
 	return append(options, grpc.WithTransportCredentials(insecure.NewCredentials()))
 }
 
-func NewRetryUnaryInterceptor(
-	maxRetryAttempts uint,
-	lg logger.Logger,
-) []grpc.DialOption {
+// NewRetryUnaryInterceptor constructs grpc unary client interceptor with retry.
+func NewRetryUnaryInterceptor(maxRetryAttempts uint, lg logger.Logger) []grpc.DialOption {
 	return []grpc.DialOption{
 		grpc.WithUnaryInterceptor(
 			retry.UnaryClientInterceptor(

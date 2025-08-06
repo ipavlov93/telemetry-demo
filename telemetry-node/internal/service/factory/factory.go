@@ -6,7 +6,7 @@ import (
 	sensorapi "github.com/ipavlov93/telemetry-demo/pkg/grpc/generated/v1/sensor_service"
 	"github.com/ipavlov93/telemetry-demo/pkg/logger"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/service"
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/strategy/channel/receive"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/strategy/channel"
 	rps "github.com/ipavlov93/telemetry-demo/telemetry-node/pkg/utils/rate"
 	"go.uber.org/zap"
 	ratelimiter "golang.org/x/time/rate"
@@ -35,7 +35,7 @@ func NewSensorServiceRPS(
 	sensorService, err := service.NewSensorService(
 		sensorClient,
 		limiter,
-		&receive.DrainLastStrategy{},
+		channel.NewDrainLastStrategy(),
 		shutdownDuration,
 		lg,
 	)

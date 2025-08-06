@@ -1,14 +1,19 @@
-package receive
+package channel
 
 import (
 	"context"
 
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/measurement"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/service"
 )
 
-type DrainAllStrategy struct{}
+type drainAllStrategy struct{}
 
-func (d *DrainAllStrategy) Receive(ctx context.Context, valuesChan <-chan []measurement.SensorValue) []measurement.SensorValue {
+func NewDrainAllStrategy() service.DrainStrategy {
+	return &drainAllStrategy{}
+}
+
+func (d *drainAllStrategy) Receive(ctx context.Context, valuesChan <-chan []measurement.SensorValue) []measurement.SensorValue {
 	var valuesBatch []measurement.SensorValue
 
 	for {

@@ -1,8 +1,10 @@
+// Package config contains application config and functionality to load it from several destinations.
 package config
 
 import (
 	"github.com/ipavlov93/telemetry-demo/pkg/env"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/logger"
+	logfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/logger/factory"
 )
 
 type AppConfig struct {
@@ -13,11 +15,14 @@ type AppConfig struct {
 	// telemetry-sink gRPC socket
 	GrpcServerSocket           string
 	GrpcClientMaxRetryAttempts uint
-	AppLoggerConfig            logger.Config
+	AppLoggerConfig            logger.ConfigMap
 }
 
 func NewAppConfig() *AppConfig {
-	return loadFromEnvVariables()
+	cfg := loadFromEnvVariables()
+	cfg.AppLoggerConfig = logfactory.NewDefaultLoggerConfig()
+
+	return cfg
 }
 
 // loadConfigEnv parses environment variables or set default values.
@@ -28,8 +33,5 @@ func loadFromEnvVariables() *AppConfig {
 		RequestRatePerSecond:       env.ParseFloat32Env("REQUEST_RATE_PER_SECOND", 1),
 		GrpcServerSocket:           env.EnvironmentVariable("GRPC_SERVER_SOCKET", "localhost:8000"),
 		GrpcClientMaxRetryAttempts: env.ParseUintEnv("GRPC_CLIENT_MAX_RETRY_ATTEMPTS_NUMBER", 1),
-		AppLoggerConfig: logger.Config{
-			MinLevel: env.EnvironmentVariable("LOGGER_MIN_LOG_LEVEL", "info"),
-		},
 	}
 }

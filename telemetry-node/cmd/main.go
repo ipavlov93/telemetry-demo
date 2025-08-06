@@ -9,11 +9,11 @@ import (
 
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config"
 	simulatorfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/simulator/factory"
-	retryfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/infra/grpc/factory/retry"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/infra/logger/factory/writer"
 	zapfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/infra/logger/factory/zap"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/service"
 	servicefactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/service/factory"
+	retryfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/pkg/retry"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )

@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config"
+	"github.com/ipavlov93/telemetry-demo/pkg/env"
+	configfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/factory"
 	simulatorfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/domain/simulator/factory"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/infra/logger/factory/writer"
 	zapfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/infra/logger/factory/zap"
@@ -19,7 +21,12 @@ import (
 )
 
 func main() {
-	appConfig := config.NewAppConfig()
+	appConfig, err := configfactory.NewAppConfig(
+		env.EnvironmentVariable("APP_CONFIG", "config.json"),
+	)
+	if err != nil {
+		log.Fatalf("failed to read app config: %v", err)
+	}
 
 	// Create a context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

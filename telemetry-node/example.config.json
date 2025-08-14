@@ -1,0 +1,19 @@
+{
+  "sensorName": "sensor-name",
+  "requestRatePerSecond": 1,
+  "sensorValueRatePerSecond": 5,
+  "grpcServerSocket": "localhost:8000",
+  "grpcClientMaxRetryAttempts": 1,
+  "appLoggerConfig": {
+    "APP_LOGGER": {
+      "enabled": true,
+      "minLevel": "info",
+      "destination": "stdout",
+      "file": {
+        "filePath": "",
+        "fileName": "appLogFile.log",
+        "fileRotationPeriod": "1m"
+      }
+    }
+  }
+}

@@ -6,6 +6,7 @@ profile.cov
 
 # env file
 .env
+config.json
 
 # log files
 *.log.json

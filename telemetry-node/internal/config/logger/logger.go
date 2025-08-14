@@ -1,3 +1,4 @@
+// Package logger contains log configuration related types.
 package logger
 
 type ConfigMap map[string]Configuration // map[name]Configuration
@@ -10,9 +11,9 @@ func NewNopConfigMap(key string) ConfigMap {
 
 // Configuration is a single logger config
 type Configuration struct {
-	Enabled     bool
-	MinLevel    string
-	Destination logOutput
+	Enabled     bool      `json:"enabled"`
+	MinLevel    string    `json:"minLevel"`
+	Destination logOutput `json:"destination"`
 
 	File *FileLoggerConfig `json:"file,omitempty"`
 }

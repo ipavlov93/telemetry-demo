@@ -21,13 +21,12 @@ import (
 )
 
 func main() {
-	configResult, err := configfactory.NewAppConfigResult(
+	appConfig, err := configfactory.NewAppConfig(
 		env.EnvironmentVariable("TELEMETRY_SINK_APP_CONFIG", "config.json"),
 	)
 	if err != nil {
-		log.Fatalf("failed to read app config: %v", err)
+		log.Fatalf("failed to build app config: %v", err)
 	}
-	appConfig := configResult.AppConfig
 
 	// Create a context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

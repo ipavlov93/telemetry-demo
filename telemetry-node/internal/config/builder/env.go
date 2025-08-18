@@ -5,17 +5,24 @@ import (
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/reader/env"
 )
 
-type builderEnv struct{}
+type configBuilderFromEnv struct {
+	loggerConfigMapKey string
+}
 
-func NewBuilderEnv() Builder { return &builderEnv{} }
+func NewBuilderEnv(loggerName string) Builder {
+	return &configBuilderFromEnv{
+		loggerConfigMapKey: loggerName,
+	}
+}
 
-func (b *builderEnv) Config() (*Result, error) {
+// ConfigResult builds config Result with default logger.ConfigMap because env does not support logger.Configuration.
+func (b *configBuilderFromEnv) ConfigResult() (*Result, error) {
 	cfg := env.LoadOrDefault()
-	cfg.AppLoggerConfig = logfactory.NewDefaultConfigMap("APP_LOGGER")
+	cfg.AppLoggerConfig = logfactory.NewDefaultLoggerConfig(b.loggerConfigMapKey)
 
 	return NewResultWithConfig(b, cfg), nil
 }
 
-func (b *builderEnv) String() string {
-	return builderTypeEnv.String()
+func (b *configBuilderFromEnv) String() string {
+	return builderFromEnv.String()
 }

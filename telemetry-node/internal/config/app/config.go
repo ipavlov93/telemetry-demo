@@ -2,6 +2,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/logger"
@@ -19,6 +20,9 @@ type Config struct {
 }
 
 func (c *Config) Validate() error {
+	if c == nil {
+		return errors.New("nil app config")
+	}
 	if c.GrpcServerSocket == "" {
 		return fmt.Errorf("grpcServerSocket cannot be empty")
 	}

@@ -2,7 +2,12 @@ package builder
 
 import "fmt"
 
+type Strategy interface {
+	ConfigBuiltByBuilder() Builder
+	Builder
+}
+
 type Builder interface {
-	Config() (*Result, error)
+	ConfigResult() (*Result, error)
 	fmt.Stringer
 }

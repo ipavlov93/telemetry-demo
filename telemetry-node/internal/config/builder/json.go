@@ -6,22 +6,23 @@ import (
 	jsonpkg "github.com/ipavlov93/telemetry-demo/pkg/json"
 )
 
-type builderJSON struct {
+type configBuilderFromJSON struct {
 	reader io.Reader
 }
 
-func NewBuilderJSON(reader io.Reader) Builder {
-	return &builderJSON{
+func NewJSONBuilderStrategy(reader io.Reader) Builder {
+	return &configBuilderFromJSON{
 		reader: reader,
 	}
 }
 
-func (b *builderJSON) Config() (*Result, error) {
+func (b *configBuilderFromJSON) ConfigResult() (*Result, error) {
 	result := NewResult(b)
+
 	err := jsonpkg.Decode(result.appConfig, b.reader)
 	return result, err
 }
 
-func (b *builderJSON) String() string {
-	return builderTypeJSON.String()
+func (b *configBuilderFromJSON) String() string {
+	return builderFromJSON.String()
 }

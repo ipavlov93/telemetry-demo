@@ -5,13 +5,15 @@ import "fmt"
 type Type string
 
 const (
-	builderTypeJSON Type = "json_builder"
-	builderTypeEnv  Type = "env_builder"
+	builderFromJSON Type = "json_builder"
+	builderFromEnv  Type = "env_builder"
+	priorityBuilder Type = "priority_builder"
 )
 
 var validLogOutputs = map[Type]struct{}{
-	builderTypeJSON: {},
-	builderTypeEnv:  {},
+	builderFromJSON: {},
+	builderFromEnv:  {},
+	priorityBuilder: {},
 }
 
 func (t Type) String() string {

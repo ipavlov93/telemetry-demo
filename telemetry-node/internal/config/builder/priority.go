@@ -4,30 +4,34 @@ import (
 	"fmt"
 )
 
-// priorityBuilder tries to build app config using given strategies with corresponding order
-type priorityBuilder struct {
-	strategies    []Builder
+// priorityBuilderStrategy tries to build app config using given builders with corresponding order
+type priorityBuilderStrategy struct {
+	builders      []Builder
 	resultBuiltBy Builder
 }
 
-func NewPriorityBuilder(strategies []Builder) Builder {
-	return &priorityBuilder{
-		strategies: strategies,
+func NewPriorityBuilderStrategy(builders []Builder) Strategy {
+	return &priorityBuilderStrategy{
+		builders: builders,
 	}
 }
 
-func (b *priorityBuilder) Config() (*Result, error) {
-	for _, builderStrategy := range b.strategies {
-		config, err := builderStrategy.Config()
+func (b *priorityBuilderStrategy) ConfigResult() (*Result, error) {
+	for _, builder := range b.builders {
+		config, err := builder.ConfigResult()
 		if err != nil {
 			continue
 		}
-		b.resultBuiltBy = builderStrategy
+		b.resultBuiltBy = builder
 		return config, nil
 	}
-	return nil, fmt.Errorf("no strategy found to build app config")
+	return nil, fmt.Errorf("no builder found to build app config without error, builder chain length: %d", len(b.builders))
 }
 
-func (b *priorityBuilder) String() string {
-	return b.resultBuiltBy.String()
+func (b *priorityBuilderStrategy) String() string {
+	return priorityBuilder.String()
+}
+
+func (b *priorityBuilderStrategy) ConfigBuiltByBuilder() Builder {
+	return b.resultBuiltBy
 }

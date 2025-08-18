@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-// Decode loads source to destination.
+// Decode loads source to destination using json deserialization.
 func Decode(destination any, source io.Reader) error {
 	decoder := json.NewDecoder(source)
 	err := decoder.Decode(destination)

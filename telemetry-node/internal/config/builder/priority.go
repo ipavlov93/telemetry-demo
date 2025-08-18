@@ -2,13 +2,12 @@ package builder
 
 import (
 	"fmt"
-
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/app"
 )
 
 // priorityBuilder tries to build app config using given strategies with corresponding order
 type priorityBuilder struct {
-	strategies []Builder
+	strategies    []Builder
+	resultBuiltBy Builder
 }
 
 func NewPriorityBuilder(strategies []Builder) Builder {
@@ -17,13 +16,18 @@ func NewPriorityBuilder(strategies []Builder) Builder {
 	}
 }
 
-func (b priorityBuilder) Config() (*app.Config, error) {
+func (b *priorityBuilder) Config() (*Result, error) {
 	for _, builderStrategy := range b.strategies {
 		config, err := builderStrategy.Config()
 		if err != nil {
 			continue
 		}
+		b.resultBuiltBy = builderStrategy
 		return config, nil
 	}
 	return nil, fmt.Errorf("no strategy found to build app config")
+}
+
+func (b *priorityBuilder) String() string {
+	return b.resultBuiltBy.String()
 }

@@ -1,7 +1,8 @@
 package builder
 
-import "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/app"
+import "fmt"
 
 type Builder interface {
-	Config() (*app.Config, error)
+	Config() (*Result, error)
+	fmt.Stringer
 }

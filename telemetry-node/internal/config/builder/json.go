@@ -4,7 +4,6 @@ import (
 	"io"
 
 	jsonpkg "github.com/ipavlov93/telemetry-demo/pkg/json"
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/app"
 )
 
 type builderJSON struct {
@@ -17,7 +16,12 @@ func NewBuilderJSON(reader io.Reader) Builder {
 	}
 }
 
-func (b builderJSON) Config() (*app.Config, error) {
-	cfg := &app.Config{}
-	return cfg, jsonpkg.Decode(cfg, b.reader)
+func (b *builderJSON) Config() (*Result, error) {
+	result := NewResult(b)
+	err := jsonpkg.Decode(result.AppConfig, b.reader)
+	return result, err
+}
+
+func (b *builderJSON) String() string {
+	return builderTypeJSON.String()
 }

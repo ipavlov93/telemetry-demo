@@ -18,7 +18,7 @@ func NewBuilderJSON(reader io.Reader) Builder {
 
 func (b *builderJSON) Config() (*Result, error) {
 	result := NewResult(b)
-	err := jsonpkg.Decode(result.AppConfig, b.reader)
+	err := jsonpkg.Decode(result.appConfig, b.reader)
 	return result, err
 }
 

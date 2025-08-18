@@ -5,14 +5,24 @@
   "grpcServerSocket": "localhost:8000",
   "grpcClientMaxRetryAttempts": 1,
   "appLoggerConfig": {
-    "APP_LOGGER": {
+    "APP_LOGGER_1": {
       "enabled": true,
       "minLevel": "info",
-      "destination": "stdout",
+      "destination": "stdout"
+    },
+    "APP_LOGGER_2": {
+      "enabled": true,
+      "minLevel": "error",
+      "destination": "file",
       "file": {
         "filePath": "",
         "fileName": "appLogFile.log",
         "fileRotationPeriod": "1m"
+      },
+      "APP_LOGGER_3": {
+        "enabled": false,
+        "minLevel": "debug",
+        "destination": "stdout"
       }
     }
   }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/app"
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/builder"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/factory"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/logger"
 	"github.com/stretchr/testify/require"
@@ -14,7 +15,7 @@ import (
 
 const configFileName = "config.test.json"
 
-func TestNewAppConfig(t *testing.T) {
+func TestNewAppConfigResult(t *testing.T) {
 	defaultConfig := &app.Config{
 		SensorName:                 "default-sensor-name",
 		RequestRatePerSecond:       1,
@@ -29,35 +30,75 @@ func TestNewAppConfig(t *testing.T) {
 		},
 	}
 
+	expectedConfig := &app.Config{
+		SensorName:                 "sensor-name-123",
+		RequestRatePerSecond:       11,
+		SensorValueRatePerSecond:   12,
+		GrpcServerSocket:           "localhost:13",
+		GrpcClientMaxRetryAttempts: 14,
+		AppLoggerConfig: logger.ConfigMap{
+			"APP_LOGGER": logger.Configuration{
+				Enabled:     false,
+				MinLevel:    "error",
+				Destination: logger.LogOutputFile,
+				File: &logger.FileLoggerConfig{
+					FilePath:           "../../",
+					FileName:           "appLogFile.log",
+					FileRotationPeriod: "1m",
+				},
+			},
+		},
+	}
+
 	tests := []struct {
 		name          string
 		configContent any
-		expected      *app.Config
+		expected      *builder.Result
 		expectErr     bool
 		missingFile   bool
 	}{
 		{
+			name:        "missing config file",
+			missingFile: true,
+			expectErr:   false,
+			expected:    builder.NewResultWithConfig(builder.NewBuilderEnv(), defaultConfig),
+		},
+		{
+			name:          "invalid JSON file",
+			configContent: "{ this is invalid json ",
+			expectErr:     false,
+			expected:      builder.NewResultWithConfig(builder.NewBuilderEnv(), defaultConfig),
+		},
+		{
+			name:      "duplicated JSON keys in appLoggerConfig object",
+			expectErr: false,
+			expected:  builder.NewResultWithConfig(builder.NewBuilderEnv(), defaultConfig),
+			configContent: `
+			{
+			  "sensorName": "sensor-name-123",
+			  "requestRatePerSecond": 11,
+			  "sensorValueRatePerSecond": 12,
+			  "grpcServerSocket": "localhost:13",
+			  "grpcClientMaxRetryAttempts": 14,
+			  "appLoggerConfig": {
+			    "APP_LOGGER": {
+			      "enabled": false,
+			      "minLevel": "error",
+			      "destination": "file",
+			    },
+			    "APP_LOGGER": {
+			      "enabled": true,
+			      "minLevel": "info",
+			      "destination": "stdout",
+			    }
+			  }
+			}
+			`,
+		},
+		{
 			name:      "valid JSON file and env vars",
 			expectErr: false,
-			expected: &app.Config{
-				SensorName:                 "sensor-name-123",
-				RequestRatePerSecond:       11,
-				SensorValueRatePerSecond:   12,
-				GrpcServerSocket:           "localhost:13",
-				GrpcClientMaxRetryAttempts: 14,
-				AppLoggerConfig: logger.ConfigMap{
-					"APP_LOGGER": logger.Configuration{
-						Enabled:     false,
-						MinLevel:    "error",
-						Destination: logger.LogOutputFile,
-						File: &logger.FileLoggerConfig{
-							FilePath:           "../../",
-							FileName:           "appLogFile.log",
-							FileRotationPeriod: "1m",
-						},
-					},
-				},
-			},
+			expected:  builder.NewResultWithConfig(builder.NewBuilderJSON(nil), expectedConfig),
 			configContent: `
 			{
 			  "sensorName": "sensor-name-123",
@@ -79,18 +120,6 @@ func TestNewAppConfig(t *testing.T) {
 			  }
 			}
 			`,
-		},
-		{
-			name:        "missing config file",
-			missingFile: true,
-			expectErr:   false,
-			expected:    defaultConfig,
-		},
-		{
-			name:          "invalid JSON file",
-			configContent: "{ this is invalid json ",
-			expectErr:     false,
-			expected:      defaultConfig,
 		},
 	}
 
@@ -120,7 +149,7 @@ func TestNewAppConfig(t *testing.T) {
 				_ = f.Close()
 			}
 
-			cfg, err := factory.NewAppConfig(configFileName)
+			cfg, err := factory.NewAppConfigResult(configFileName)
 
 			if tt.expectErr {
 				require.Error(t, err)
@@ -129,8 +158,8 @@ func TestNewAppConfig(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, cfg)
 
-				require.EqualValues(t, tt.expected, cfg)
-				//reflect.DeepEqual(t, tt.expected, cfg)
+				require.EqualValues(t, tt.expected.AppConfig, cfg.AppConfig)
+				//reflect.DeepEqual(t, tt.expected, cfg.AppConfig)
 			}
 
 			_ = os.Chdir(origWd)

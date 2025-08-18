@@ -3,11 +3,10 @@ package factory
 import (
 	"os"
 
-	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/app"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/builder"
 )
 
-func NewAppConfig(fileName string) (config *app.Config, err error) {
+func NewAppConfigResult(fileName string) (config *builder.Result, err error) {
 	// Notice: error check is ignored
 	file, err := os.Open(fileName)
 	if err == nil {

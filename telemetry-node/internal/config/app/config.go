@@ -2,6 +2,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/logger"
 )
 
@@ -14,4 +16,11 @@ type Config struct {
 	GrpcServerSocket           string           `json:"grpcServerSocket"`
 	GrpcClientMaxRetryAttempts uint             `json:"grpcClientMaxRetryAttempts"`
 	AppLoggerConfig            logger.ConfigMap `json:"appLoggerConfig"`
+}
+
+func (c *Config) Validate() error {
+	if c.GrpcServerSocket == "" {
+		return fmt.Errorf("grpcServerSocket cannot be empty")
+	}
+	return nil
 }

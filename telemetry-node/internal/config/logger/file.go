@@ -1,9 +1,7 @@
 package logger
 
-import "time"
-
 type FileLoggerConfig struct {
-	FilePath           string
-	FileName           string
-	FileRotationPeriod time.Duration
+	FilePath           string `json:"filePath"`
+	FileName           string `json:"fileName"`
+	FileRotationPeriod string `json:"fileRotationPeriod"`
 }

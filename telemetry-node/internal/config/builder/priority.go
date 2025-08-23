@@ -2,23 +2,25 @@ package builder
 
 import (
 	"fmt"
+
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/app"
 )
 
-// priorityBuilderStrategy tries to build app config using given builders with corresponding order
-type priorityBuilderStrategy struct {
-	builders      []Builder
-	resultBuiltBy Builder
+// priorityConfigBuilder tries to build app config using given builders with corresponding order
+type priorityConfigBuilder struct {
+	builders      []app.ConfigBuilder
+	resultBuiltBy app.ConfigBuilder
 }
 
-func NewPriorityBuilderStrategy(builders []Builder) Strategy {
-	return &priorityBuilderStrategy{
+func NewPriorityConfigBuilder(builders []app.ConfigBuilder) app.ConfigBuilder {
+	return &priorityConfigBuilder{
 		builders: builders,
 	}
 }
 
-func (b *priorityBuilderStrategy) ConfigResult() (*Result, error) {
+func (b *priorityConfigBuilder) Build() (*app.ConfigResult, error) {
 	for _, builder := range b.builders {
-		config, err := builder.ConfigResult()
+		config, err := builder.Build()
 		if err != nil {
 			continue
 		}
@@ -28,10 +30,10 @@ func (b *priorityBuilderStrategy) ConfigResult() (*Result, error) {
 	return nil, fmt.Errorf("no builder found to build app config without error, builder chain length: %d", len(b.builders))
 }
 
-func (b *priorityBuilderStrategy) String() string {
-	return priorityBuilder.String()
+func (b *priorityConfigBuilder) ConfigBuiltByConfigBuilder() app.ConfigBuilder {
+	return b.resultBuiltBy
 }
 
-func (b *priorityBuilderStrategy) ConfigBuiltByBuilder() Builder {
-	return b.resultBuiltBy
+func (b *priorityConfigBuilder) String() string {
+	return priorityBuilder.String()
 }

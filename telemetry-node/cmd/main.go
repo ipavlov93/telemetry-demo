@@ -22,7 +22,7 @@ import (
 
 func main() {
 	appConfig, err := configfactory.NewAppConfig(
-		env.EnvironmentVariable("TELEMETRY_SINK_APP_CONFIG", "config.json"),
+		env.EnvironmentVariable("TELEMETRY_NODE_APP_CONFIG", "config.json"),
 	)
 	if err != nil {
 		log.Fatalf("failed to build app config: %v", err)

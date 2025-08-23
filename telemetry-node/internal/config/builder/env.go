@@ -1,21 +1,29 @@
 package builder
 
 import (
+	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/app"
 	logfactory "github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/logger/factory"
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/reader/env"
 )
 
-type builderEnv struct{}
-
-func NewBuilderEnv() Builder { return &builderEnv{} }
-
-func (b *builderEnv) Config() (*Result, error) {
-	cfg := env.LoadOrDefault()
-	cfg.AppLoggerConfig = logfactory.NewDefaultConfigMap("APP_LOGGER")
-
-	return NewResultWithConfig(b, cfg), nil
+type configBuilderFromEnv struct {
+	loggerConfigMapKey string
 }
 
-func (b *builderEnv) String() string {
-	return builderTypeEnv.String()
+func NewBuilderFromEnv(loggerName string) app.ConfigBuilder {
+	return &configBuilderFromEnv{
+		loggerConfigMapKey: loggerName,
+	}
+}
+
+// Build ConfigResult with default logger.ConfigMap because env does not support logger.Configuration.
+func (b *configBuilderFromEnv) Build() (*app.ConfigResult, error) {
+	cfg := env.LoadOrDefault()
+	cfg.AppLoggerConfig = logfactory.NewDefaultLoggerConfig(b.loggerConfigMapKey)
+
+	return app.NewConfigResult(b, cfg), nil
+}
+
+func (b *configBuilderFromEnv) String() string {
+	return builderFromEnv.String()
 }

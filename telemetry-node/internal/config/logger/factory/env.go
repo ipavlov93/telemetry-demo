@@ -5,7 +5,7 @@ import (
 	"github.com/ipavlov93/telemetry-demo/telemetry-node/internal/config/logger"
 )
 
-func NewDefaultConfigMap(key string) logger.ConfigMap {
+func NewDefaultLoggerConfig(key string) logger.ConfigMap {
 	return logger.ConfigMap{
 		key: NewStdoutLoggerConfig(),
 	}

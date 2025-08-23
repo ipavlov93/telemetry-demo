@@ -14,27 +14,32 @@ func NewAppConfig(fileName string) (config *app.Config, err error) {
 		return nil, err
 	}
 
-	appConfig := configResult.AppConfig()
-	if err = appConfig.Validate(); err != nil {
-		return nil, fmt.Errorf(
-			"builder %v returned invalid app config: %v",
-			configResult.BuiltBy(), err)
-	}
-
 	return configResult.AppConfig(), nil
 }
 
-func newAppConfigResult(fileName string) (config *builder.Result, err error) {
+func newAppConfigResult(fileName string) (config *app.ConfigResult, err error) {
 	// Notice: error check is ignored
 	file, err := os.Open(fileName)
 	if err == nil {
 		defer file.Close()
 	}
 
-	builderStrategies := []builder.Builder{
-		builder.NewBuilderJSON(file),
-		builder.NewBuilderEnv(),
+	builders := []app.ConfigBuilder{
+		builder.NewBuilderFromJSON(file),
+		builder.NewBuilderFromEnv("APP_LOGGER"),
 	}
 
-	return builder.NewPriorityBuilder(builderStrategies).Config()
+	priorityConfigBuilder := builder.NewPriorityConfigBuilder(builders)
+	result, err := priorityConfigBuilder.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	if err = result.AppConfig().Validate(); err != nil {
+		return nil, fmt.Errorf(
+			"builder %v returned invalid app config: %v",
+			priorityConfigBuilder, err)
+	}
+
+	return result, nil
 }

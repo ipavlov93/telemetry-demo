@@ -18,11 +18,16 @@ func NewBuilderFromJSON(reader io.Reader) app.ConfigBuilder {
 }
 
 func (b *configBuilderFromJSON) Build() (*app.ConfigResult, error) {
-	result := app.NewConfigResult(b, nil)
+	appConfig := &app.Config{}
+	err := jsonpkg.Decode(appConfig, b.reader)
+	if err != nil {
+		return nil, err
+	}
 
-	err := jsonpkg.Decode(result.AppConfig(), b.reader)
-	return result, err
+	return app.NewConfigResult(appConfig)
 }
+
+func (b *configBuilderFromJSON) BuiltBy() app.ConfigBuilder { return b }
 
 func (b *configBuilderFromJSON) String() string {
 	return builderFromJSON.String()

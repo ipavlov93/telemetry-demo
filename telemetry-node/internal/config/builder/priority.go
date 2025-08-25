@@ -18,6 +18,7 @@ func NewPriorityConfigBuilder(builders []app.ConfigBuilder) app.ConfigBuilder {
 	}
 }
 
+// Build sets resultBuiltBy if build has succeeded. Otherwise, it returns an error.
 func (b *priorityConfigBuilder) Build() (*app.ConfigResult, error) {
 	for _, builder := range b.builders {
 		config, err := builder.Build()
@@ -30,7 +31,7 @@ func (b *priorityConfigBuilder) Build() (*app.ConfigResult, error) {
 	return nil, fmt.Errorf("no builder found to build app config without error, builder chain length: %d", len(b.builders))
 }
 
-func (b *priorityConfigBuilder) ConfigBuiltByConfigBuilder() app.ConfigBuilder {
+func (b *priorityConfigBuilder) BuiltBy() app.ConfigBuilder {
 	return b.resultBuiltBy
 }
 

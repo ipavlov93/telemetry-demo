@@ -41,5 +41,7 @@ func newAppConfigResult(fileName string) (config *app.ConfigResult, err error) {
 			priorityConfigBuilder, err)
 	}
 
+	result.SetBuiltBy(priorityConfigBuilder.BuiltBy())
+
 	return result, nil
 }

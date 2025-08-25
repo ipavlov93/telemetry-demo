@@ -21,8 +21,10 @@ func (b *configBuilderFromEnv) Build() (*app.ConfigResult, error) {
 	cfg := env.LoadOrDefault()
 	cfg.AppLoggerConfig = logfactory.NewDefaultLoggerConfig(b.loggerConfigMapKey)
 
-	return app.NewConfigResult(b, cfg), nil
+	return app.NewConfigResult(cfg)
 }
+
+func (b *configBuilderFromEnv) BuiltBy() app.ConfigBuilder { return b }
 
 func (b *configBuilderFromEnv) String() string {
 	return builderFromEnv.String()
